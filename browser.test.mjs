@@ -335,6 +335,29 @@ test("browser gameplay and responsive interface", async (t) => {
           touchPoints: [],
         });
         assert.equal(await page.textContent("#score"), "0020");
+        const interaction = await page.evaluate(async () => {
+          const game = document.getElementById("game");
+          const style = getComputedStyle(game);
+          const stylesheet = await (await fetch("./style.css")).text();
+          const select = new Event("selectstart", { cancelable: true });
+          const context = new Event("contextmenu", { cancelable: true });
+          return {
+            userSelect: style.userSelect,
+            webkitUserSelect: style.webkitUserSelect,
+            calloutLocked: stylesheet.includes("-webkit-touch-callout: none"),
+            touchAction: style.touchAction,
+            selectPrevented: !game.dispatchEvent(select),
+            contextPrevented: !game.dispatchEvent(context),
+          };
+        });
+        assert.deepEqual(interaction, {
+          userSelect: "none",
+          webkitUserSelect: "none",
+          calloutLocked: true,
+          touchAction: "none",
+          selectPrevented: true,
+          contextPrevented: true,
+        });
         for (const width of [320, 390, 640, 768]) {
           await page.setViewportSize({ width, height: 900 });
           assert.equal(

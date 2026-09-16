@@ -244,6 +244,10 @@ h1 em {
   border-radius: 5px;
   background: #779554;
   aspect-ratio: 1;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 canvas {
   display: block;
@@ -251,6 +255,11 @@ canvas {
   height: 100%;
   touch-action: none;
   image-rendering: pixelated;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 .overlay {
   position: absolute;

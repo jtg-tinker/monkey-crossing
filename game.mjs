@@ -778,6 +778,8 @@ document.addEventListener("keydown", (event) => {
 for (const button of document.querySelectorAll("[data-direction]"))
   button.addEventListener("click", () => move(button.dataset.direction));
 let swipe;
+for (const eventName of ["contextmenu", "selectstart", "dragstart"])
+  canvas.addEventListener(eventName, (event) => event.preventDefault());
 canvas.addEventListener("pointerdown", (event) => {
   swipe = { x: event.clientX, y: event.clientY };
   canvas.setPointerCapture(event.pointerId);

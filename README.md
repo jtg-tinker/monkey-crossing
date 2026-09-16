@@ -8,7 +8,7 @@ A Frogger-style browser arcade game built with HTML, CSS, and JavaScript Canvas.
 
 - Pixel-art monkey, cars, trucks, and jungle scenery drawn directly on Canvas.
 - Cartoon blood splatter on car impacts, with a toggle to turn it off.
-- Keyboard controls, mobile swipe gestures, and on-screen movement buttons.
+- Keyboard controls, mobile swipe gestures, on-screen movement buttons, and iOS selection/callout suppression on the game screen.
 - Three lives, a 60-second timer per attempt, and progressively faster traffic.
 - Collect the left, middle, and right banana spots to advance a level; each stays empty until all three are collected.
 - Points for forward progress and successful crossings, plus a remaining-time bonus.
