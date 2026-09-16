@@ -284,10 +284,10 @@ test("browser gameplay and responsive interface", async (t) => {
         );
         assert.deepEqual(
           await page.locator("#leaderboard thead th").allTextContents(),
-          ["USER", "SCORE", "PLATFORM", "RECORD"],
+          ["USER", "SCORE", "RECORD", "PLATFORM"],
         );
         assert.equal(
-          await page.locator("#leaderboard-rows td").nth(3).textContent(),
+          await page.locator("#leaderboard-rows td").nth(2).textContent(),
           "1ST",
         );
         assert.deepEqual(errors, []);
@@ -373,6 +373,17 @@ test("browser gameplay and responsive interface", async (t) => {
             ),
             true,
             `no overflow at ${width}px`,
+          );
+          assert.equal(
+            await page.evaluate(() => {
+              const shell = document.querySelector(".board-shell");
+              return (
+                shell.scrollWidth <= shell.clientWidth &&
+                shell.querySelector("table").scrollWidth <= shell.clientWidth
+              );
+            }),
+            true,
+            `leaderboard table fits at ${width}px`,
           );
         }
         assert.deepEqual(errors, []);
@@ -483,8 +494,8 @@ test("browser gameplay and responsive interface", async (t) => {
           .nth(1)
           .locator("td")
           .allTextContents();
-        assert.deepEqual(record.slice(0, 3), ["MKY", "0500", posted.platform]);
-        assert.equal(record[3], "2ND");
+        assert.deepEqual(record.slice(0, 3), ["MKY", "0500", "2ND"]);
+        assert.equal(record[3], posted.platform);
         await page.reload();
         await page.waitForFunction(
           () =>

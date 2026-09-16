@@ -391,8 +391,8 @@ function renderLeaderboard() {
     for (const value of [
       entry?.initials ?? "OPEN",
       entry ? String(entry.score).padStart(4, "0") : "----",
-      entry?.platform ?? "—",
       ordinal(rank),
+      entry?.platform ?? "—",
     ]) {
       const cell = document.createElement("td");
       cell.textContent = value;

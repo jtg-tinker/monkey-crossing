@@ -650,7 +650,7 @@ kbd {
 .board-shell td:nth-child(2) {
   color: var(--yellow);
 }
-.board-shell td:nth-child(4) {
+.board-shell td:nth-child(3) {
   color: #92ab98;
   font-size: 11px;
 }
@@ -831,6 +831,13 @@ kbd {
     margin-top: 30px;
     padding: 22px;
   }
+  .board-shell table {
+    min-width: 0;
+  }
+  .board-shell th,
+  .board-shell td {
+    padding: 12px 14px;
+  }
   .score-entry {
     align-items: flex-start;
   }
@@ -1009,14 +1016,25 @@ kbd {
     min-width: 0;
   }
   .board-shell table {
-    min-width: 500px;
+    min-width: 0;
   }
   .board-shell th,
   .board-shell td {
-    padding: 12px 14px;
+    padding: 10px 8px;
+  }
+  .board-shell th {
+    font-size: 7px;
+    letter-spacing: 0.8px;
   }
   .board-shell td {
-    font-size: 13px;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+  }
+  .board-shell td:nth-child(3) {
+    font-size: 9px;
+  }
+  #leaderboard-status {
+    padding: 9px 10px 11px;
   }
   .page-footer {
     font-size: 6px;
