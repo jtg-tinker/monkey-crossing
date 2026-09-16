@@ -1,6 +1,12 @@
 import { mkdir, copyFile } from "node:fs/promises";
 
-const files = ["index.html", "style.css", "game.mjs", "core.mjs"];
+const files = [
+  "index.html",
+  "style.css",
+  "game.mjs",
+  "core.mjs",
+  "leaderboard-core.mjs",
+];
 await mkdir(new URL("./dist/", import.meta.url), { recursive: true });
 await Promise.all(
   files.map((file) =>

@@ -13,16 +13,16 @@ A Frogger-style browser arcade game built with HTML, CSS, and JavaScript Canvas.
 - Collect the left, middle, and right banana spots to advance a level; each stays empty until all three are collected.
 - Points for forward progress and successful crossings, plus a remaining-time bonus.
 - Personal best scores and the blood-effects preference saved locally in your browser.
+- A public **Top Monkey Crossers** leaderboard with three-letter arcade initials, player platform, and 1st–10th records.
 - Optional synthesized sound effects, pause/resume, and reduced-motion support.
-- A share button that shares or copies the game URL once publicly hosted.
 
-Blood effects are on by default; sound effects are off. Both can be changed beside the game. No account, backend, or runtime JavaScript libraries are required to play.
+Blood effects are on by default; sound effects are off. Both can be changed beside the game. No account is required to play. The public leaderboard uses Netlify Functions and Netlify Blobs when the site is deployed through Netlify; local previews use a browser-only board.
 
 ## How to play
 
 Reach the banana grove at the top of the screen and move onto a banana spot to collect it. The banana disappears from that exact spot, which stays empty even if you lose a life. Empty spots and gaps do not award another banana; you can move along the grove to reach an uncollected one. Collect all three spots to advance to the next level and refill the grove.
 
-Avoid vehicles, stay on logs in the river, and don't drift off-screen. A collision, fall into the water, or expired timer costs one life. Lose all three lives and your run ends.
+Avoid vehicles, stay on logs in the river, and don't drift off-screen. A collision, fall into the water, or expired timer costs one life. Lose all three lives and your run ends. If the score qualifies for the public top ten, enter three letters on **Top Monkey Crossers** to save your User, Score, Platform, and Record rank.
 
 | Action                | Control                                              |
 | --------------------- | ---------------------------------------------------- |
@@ -71,7 +71,7 @@ The browser tests use installed **Google Chrome on macOS**. On Linux, install Pl
 npx playwright install chromium
 ```
 
-Browser tests cover movement, collisions, blood effects, pause/resume, game over, restart, local storage, and mobile controls/layout. Test screenshots are written to `/tmp/monkey-crossing-*.png`.
+Browser tests cover movement, collisions, blood effects, pause/resume, game over, restart, leaderboard submission, local storage, and mobile controls/layout. Test screenshots are written to `/tmp/monkey-crossing-*.png`.
 
 To test a different locally served copy, set `GAME_URL`:
 
@@ -87,11 +87,13 @@ Create a deployment folder:
 npm run build
 ```
 
-This copies only `index.html`, `style.css`, `game.mjs`, and `core.mjs` into `dist/`. Upload that folder to a static hosting provider. No server-side application or production dependency installation is needed.
+This copies the static browser files into `dist/`. The shared leaderboard also requires the Netlify function in `netlify/functions/`; deploy it by connecting the Git repository to Netlify rather than using a manual `dist` upload.
 
 ### Netlify
 
-Sign in at [Netlify Drop](https://app.netlify.com/drop) and drag the `dist` folder onto the page. Netlify provides a public URL that you can share with other players.
+The included `netlify.toml` sets the build command to `npm run build`, publishes `dist/`, and deploys `netlify/functions/`. Netlify Blobs is provisioned automatically for the site; no database credentials are required.
+
+For a new Netlify site, import `jtg-tinker/monkey-crossing`, keep the `main` production branch, and deploy. For an existing site, connect the repository under the project's build settings and trigger a deploy. Pushes to `main` update both the game and `/api/leaderboard`.
 
 ### GitHub Pages
 
@@ -102,18 +104,22 @@ GitHub Pages is not enabled by simply pushing the repository. To publish this pr
 3. Select the **main** branch and **/ (root)** folder, then save.
 4. Wait for deployment to finish and use the website URL shown in Pages settings.
 
-The repository root already contains the playable static files, so branch-based GitHub Pages hosting does not need the ignored `dist/` folder. Future pushes to `main` will update the site once Pages is configured.
+The repository root already contains the playable static files, so branch-based GitHub Pages hosting does not need the ignored `dist/` folder. Future pushes to `main` will update the site once Pages is configured. GitHub Pages cannot run the Netlify function, so its leaderboard falls back to a browser-only board; use Netlify for the public board.
 
 ## Project structure
 
-| File               | Purpose                                                            |
-| ------------------ | ------------------------------------------------------------------ |
-| `index.html`       | Game page, HUD, menus, and controls                                |
-| `style.css`        | Responsive layout and visual styling                               |
-| `game.mjs`         | Canvas rendering, input, audio, particles, and browser integration |
-| `core.mjs`         | Movement, lane simulation, collisions, scoring, lives, and levels  |
-| `core.test.mjs`    | Gameplay unit tests using Node's built-in test runner              |
-| `browser.test.mjs` | Playwright browser integration tests                               |
-| `build.mjs`        | Copies deployable files into `dist/`                               |
+| File                                | Purpose                                                            |
+| ----------------------------------- | ------------------------------------------------------------------ |
+| `index.html`                        | Game page, HUD, menus, and controls                                |
+| `style.css`                         | Responsive layout and visual styling                               |
+| `game.mjs`                          | Canvas rendering, input, audio, particles, and browser integration |
+| `core.mjs`                          | Movement, lane simulation, collisions, scoring, lives, and levels  |
+| `leaderboard-core.mjs`              | Shared leaderboard validation, sorting, and ranking logic          |
+| `netlify/functions/leaderboard.mjs` | Public leaderboard API backed by Netlify Blobs                     |
+| `netlify.toml`                      | Netlify build, publish, and functions configuration                |
+| `core.test.mjs`                     | Gameplay unit tests using Node's built-in test runner              |
+| `leaderboard.test.mjs`              | Leaderboard and API unit tests                                     |
+| `browser.test.mjs`                  | Playwright browser integration tests                               |
+| `build.mjs`                         | Copies deployable files into `dist/`                               |
 
 `node_modules/` and `dist/` are generated locally and excluded from Git.

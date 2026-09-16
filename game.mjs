@@ -9,6 +9,16 @@ import {
   movePlayer,
   step,
 } from "./core.mjs";
+import {
+  LEADERBOARD_LIMIT,
+  createEntry,
+  entryId,
+  mergeEntries,
+  normalizeInitials,
+  ordinal,
+  qualifies,
+  sortEntries,
+} from "./leaderboard-core.mjs";
 
 const $ = (id) => document.getElementById(id);
 const canvas = $("game");
@@ -30,7 +40,12 @@ let announcementTimer;
 let toastTimer;
 let sceneryTime = 0;
 let lastTime = 0;
-let shareInFlight = false;
+let leaderboardEntries = [];
+let leaderboardReady = false;
+let leaderboardOnline = false;
+let leaderboardRequest;
+let pendingScore;
+let submittedEntryId;
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const palette = ["#f06b24", "#ffc52e", "#176fc1", "#f7e9bb"];
 
@@ -320,6 +335,208 @@ function announce(message) {
   );
 }
 
+const leaderboardKey = "monkey-crossing-leaderboard";
+const initialsKey = "monkey-crossing-initials";
+const isLocalPreview =
+  ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname) ||
+  location.protocol === "file:";
+
+function platformName() {
+  const raw = String(
+    navigator.userAgentData?.platform || navigator.platform || "WEB",
+  ).toUpperCase();
+  if (/ANDROID/.test(raw)) return "ANDROID";
+  if (/IPHONE|IPAD|IOS/.test(raw)) return "IOS";
+  if (/MAC/.test(raw)) return "MAC";
+  if (/WIN/.test(raw)) return "WINDOWS";
+  if (/LINUX/.test(raw)) return "LINUX";
+  return "WEB";
+}
+
+function localEntries() {
+  try {
+    return sortEntries(
+      JSON.parse(localStorage.getItem(leaderboardKey) || "[]"),
+    );
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalEntries(entries) {
+  try {
+    localStorage.setItem(
+      leaderboardKey,
+      JSON.stringify(entries.slice(0, LEADERBOARD_LIMIT)),
+    );
+  } catch {}
+}
+
+function leaderboardStatus() {
+  if (leaderboardOnline) return "PUBLIC BOARD · SHARED FOR EVERY CROSSER";
+  return isLocalPreview
+    ? "LOCAL PREVIEW BOARD · SAVED IN THIS BROWSER"
+    : "PUBLIC BOARD UNAVAILABLE · SHOWING THIS DEVICE";
+}
+
+function renderLeaderboard() {
+  const rows = $("leaderboard-rows");
+  rows.replaceChildren();
+  const entries = sortEntries(leaderboardEntries).slice(0, LEADERBOARD_LIMIT);
+  for (let rank = 1; rank <= LEADERBOARD_LIMIT; rank++) {
+    const entry = entries[rank - 1];
+    const row = document.createElement("tr");
+    if (!entry) row.className = "empty";
+    else if (entry.id === submittedEntryId) row.className = "you";
+    for (const value of [
+      entry?.initials ?? "OPEN",
+      entry ? String(entry.score).padStart(4, "0") : "----",
+      entry?.platform ?? "—",
+      ordinal(rank),
+    ]) {
+      const cell = document.createElement("td");
+      cell.textContent = value;
+      row.append(cell);
+    }
+    rows.append(row);
+  }
+}
+
+async function loadLeaderboard() {
+  $("leaderboard-status").textContent = "LOADING TOP MONKEYS…";
+  try {
+    const response = await fetch("/api/leaderboard", { cache: "no-store" });
+    if (!response.ok) throw new Error("Leaderboard unavailable");
+    const data = await response.json();
+    leaderboardEntries = sortEntries(data.entries).slice(0, LEADERBOARD_LIMIT);
+    leaderboardOnline = true;
+  } catch {
+    leaderboardEntries = localEntries();
+    leaderboardOnline = false;
+  } finally {
+    leaderboardReady = true;
+    $("leaderboard-status").textContent = leaderboardStatus();
+    renderLeaderboard();
+    updateScoreEntry();
+  }
+}
+
+function refreshLeaderboard() {
+  leaderboardReady = false;
+  updateScoreEntry();
+  leaderboardRequest ||= loadLeaderboard().finally(() => {
+    leaderboardRequest = null;
+  });
+  return leaderboardRequest;
+}
+
+function updateScoreEntry() {
+  const eligible =
+    leaderboardReady &&
+    pendingScore &&
+    !pendingScore.submitted &&
+    qualifies(leaderboardEntries, pendingScore.score);
+  $("leaderboard-callout").hidden = !eligible;
+  $("score-entry").hidden = !eligible;
+  if (!eligible) return;
+  $("entry-score").textContent = String(pendingScore.score).padStart(4, "0");
+  $("entry-platform").textContent = pendingScore.platform;
+}
+
+function prepareScoreEntry() {
+  pendingScore = {
+    id: entryId(),
+    score: state.score,
+    platform: platformName(),
+    submitted: false,
+  };
+  submittedEntryId = null;
+  try {
+    $("initials").value =
+      normalizeInitials(localStorage.getItem(initialsKey)) || "AAA";
+  } catch {
+    $("initials").value = "AAA";
+  }
+  $("entry-message").textContent = "Use exactly 3 letters to claim your rank.";
+  refreshLeaderboard();
+}
+
+async function submitScore(event) {
+  event.preventDefault();
+  if (!pendingScore || pendingScore.submitted || pendingScore.submitting)
+    return;
+  const initials = normalizeInitials($("initials").value);
+  $("initials").value = initials;
+  if (initials.length !== 3) {
+    $("entry-message").textContent = "Enter exactly 3 letters.";
+    $("initials").focus();
+    return;
+  }
+  const entry = createEntry({
+    id: pendingScore.id,
+    initials,
+    score: pendingScore.score,
+    platform: pendingScore.platform,
+  });
+  if (!entry) {
+    $("entry-message").textContent = "That score could not be verified.";
+    return;
+  }
+  pendingScore.submitting = true;
+  const submitButton = $("score-form").querySelector("button");
+  submitButton.disabled = true;
+  $("entry-message").textContent = "Posting score…";
+  try {
+    let entries;
+    if (leaderboardOnline) {
+      const response = await fetch("/api/leaderboard", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(entry),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (Array.isArray(data.entries)) entries = data.entries;
+      if (!response.ok) {
+        const failure = new Error(
+          response.status === 409
+            ? "This run no longer makes the top 10."
+            : data.error || "Could not save.",
+        );
+        failure.entries = entries;
+        throw failure;
+      }
+    } else {
+      if (!qualifies(localEntries(), entry.score))
+        throw new Error("This run no longer makes the top 10.");
+      entries = mergeEntries(localEntries(), entry);
+      saveLocalEntries(entries);
+    }
+    leaderboardEntries = sortEntries(entries).slice(0, LEADERBOARD_LIMIT);
+    pendingScore.submitted = true;
+    submittedEntryId = entry.id;
+    save(initialsKey, initials);
+    renderLeaderboard();
+    const rank =
+      leaderboardEntries.findIndex((item) => item.id === entry.id) + 1;
+    $("entry-message").textContent = `${ordinal(rank)} place secured.`;
+    toast(`${initials} posted ${entry.score} points on Top Monkey Crossers.`);
+  } catch (error) {
+    if (Array.isArray(error.entries))
+      leaderboardEntries = sortEntries(error.entries).slice(
+        0,
+        LEADERBOARD_LIMIT,
+      );
+    if (error instanceof Error && error.message.includes("top 10"))
+      $("entry-message").textContent = "This run no longer makes the top 10.";
+    else $("entry-message").textContent = "Could not save. Try again.";
+    renderLeaderboard();
+  } finally {
+    pendingScore.submitting = false;
+    submitButton.disabled = false;
+    updateScoreEntry();
+  }
+}
+
 function handleEvent(type) {
   if (type === "over") {
     showOverlay(
@@ -328,6 +545,7 @@ function handleEvent(type) {
       `You scored ${state.score} points and reached level ${state.level}.<br>The bananas aren’t going to collect themselves.`,
       "Try again",
     );
+    prepareScoreEntry();
     return;
   }
   playTone(type);
@@ -393,6 +611,7 @@ function showOverlay(label, title, description, button) {
   $("overlay-description").innerHTML = description;
   $("start").textContent = `${button} →`;
   $("overlay-hint").textContent = "PRESS ENTER OR TAP THE BUTTON";
+  $("leaderboard-callout").hidden = true;
   $("overlay").classList.remove("hidden");
   $("start").focus({ preventScroll: true });
   updateHUD();
@@ -407,6 +626,8 @@ function startGame() {
     particles = [];
     stains = [];
     shake = 0;
+    pendingScore = null;
+    $("score-entry").hidden = true;
   }
   $("overlay").classList.add("hidden");
   $("announcement").classList.remove("visible");
@@ -594,34 +815,10 @@ function toast(message) {
   toastTimer = setTimeout(() => $("toast").classList.remove("visible"), 4200);
 }
 
-$("share").addEventListener("click", async () => {
-  if (shareInFlight) return;
-  if (
-    ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname) ||
-    location.protocol === "file:"
-  ) {
-    toast("This is a local preview. Publish the game to get a public link.");
-    return;
-  }
-  shareInFlight = true;
-  const url = location.href.split("#")[0];
-  try {
-    if (navigator.share)
-      await navigator.share({
-        title: "Monkey Crossing",
-        text: "Traffic is bananas. Can you beat my score?",
-        url,
-      });
-    else if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(url);
-      toast("Game link copied. Challenge a friend!");
-    } else window.prompt("Copy this link to share Monkey Crossing:", url);
-  } catch (error) {
-    if (error.name !== "AbortError")
-      window.prompt("Copy this link to share Monkey Crossing:", url);
-  } finally {
-    shareInFlight = false;
-  }
+$("initials").addEventListener("input", (event) => {
+  event.target.value = normalizeInitials(event.target.value);
 });
+$("score-form").addEventListener("submit", submitScore);
 updateHUD();
+refreshLeaderboard();
 requestAnimationFrame(frame);

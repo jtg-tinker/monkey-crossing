@@ -269,8 +269,27 @@ test("browser gameplay and responsive interface", async (t) => {
           await page.getAttribute("#blood", "aria-pressed"),
           "false",
         );
-        await page.click("#share");
-        assert.match(await page.textContent("#toast"), /local preview/);
+        assert.equal(await page.locator("#share").count(), 0);
+        assert.equal(
+          await page.getAttribute("#leaderboard-link", "href"),
+          "#leaderboard",
+        );
+        await page.click("#leaderboard-link");
+        assert.equal(new URL(page.url()).hash, "#leaderboard");
+        assert.equal(await page.isVisible("#leaderboard"), true);
+        await page.waitForFunction(
+          () => document.querySelectorAll("#leaderboard-rows tr").length === 10,
+          undefined,
+          { polling: 100 },
+        );
+        assert.deepEqual(
+          await page.locator("#leaderboard thead th").allTextContents(),
+          ["USER", "SCORE", "PLATFORM", "RECORD"],
+        );
+        assert.equal(
+          await page.locator("#leaderboard-rows td").nth(3).textContent(),
+          "1ST",
+        );
         assert.deepEqual(errors, []);
         await page.close();
       },
@@ -328,6 +347,128 @@ test("browser gameplay and responsive interface", async (t) => {
         }
         assert.deepEqual(errors, []);
         await context.close();
+      },
+    );
+
+    await t.test(
+      "public leaderboard accepts a three-letter top-ten entry",
+      async () => {
+        const page = await browser.newPage({
+          viewport: { width: 1440, height: 1200 },
+        });
+        const errors = [];
+        const entries = [
+          {
+            id: "seed-run",
+            initials: "BOT",
+            score: 900,
+            platform: "WEB",
+            createdAt: 1,
+          },
+        ];
+        let posted;
+        page.on("pageerror", (error) => errors.push(error.message));
+        await page.route("**/api/leaderboard", async (route) => {
+          const request = route.request();
+          if (request.method() === "GET") {
+            await route.fulfill({
+              contentType: "application/json",
+              body: JSON.stringify({ entries }),
+            });
+            return;
+          }
+          if (request.method() === "POST") {
+            posted = request.postDataJSON();
+            entries.push(posted);
+            entries.sort((a, b) => b.score - a.score);
+            await route.fulfill({
+              status: 201,
+              contentType: "application/json",
+              body: JSON.stringify({
+                accepted: true,
+                entry: posted,
+                entries: entries.slice(0, 10),
+              }),
+            });
+            return;
+          }
+          await route.fulfill({ status: 405 });
+        });
+        await page.route(
+          (url) => url.pathname.endsWith("/core.mjs") && !url.search,
+          (route) =>
+            route.fulfill({
+              contentType: "text/javascript",
+              body: `
+          export * from "./core.mjs?leaderboard-test";
+          import { createState as originalCreateState } from "./core.mjs?leaderboard-test";
+          export function createState() {
+            const state = originalCreateState();
+            globalThis.leaderboardTestState = state;
+            return state;
+          }
+        `,
+            }),
+        );
+        await prepare(page);
+        await page.waitForFunction(
+          () =>
+            document.getElementById("leaderboard-status").textContent ===
+            "PUBLIC BOARD · SHARED FOR EVERY CROSSER",
+          undefined,
+          { polling: 100 },
+        );
+        assert.equal(
+          await page.locator("#leaderboard-rows td").nth(0).textContent(),
+          "BOT",
+        );
+        await page.click("#start");
+        await page.evaluate(() => {
+          leaderboardTestState.score = 500;
+          leaderboardTestState.lives = 1;
+          leaderboardTestState.remaining = 0;
+        });
+        await advance(page, 70);
+        await page.waitForFunction(
+          () => !document.getElementById("score-entry").hidden,
+          undefined,
+          { polling: 100 },
+        );
+        assert.equal(await page.isVisible("#leaderboard-callout"), true);
+        await page.fill("#initials", "ab1");
+        assert.equal(await page.inputValue("#initials"), "AB");
+        await page.click("#score-form button");
+        assert.match(await page.textContent("#entry-message"), /exactly 3/i);
+        await page.fill("#initials", "mky");
+        await page.click("#score-form button");
+        await page.waitForFunction(
+          () => document.getElementById("score-entry").hidden,
+          undefined,
+          { polling: 100 },
+        );
+        assert.equal(posted.initials, "MKY");
+        assert.equal(posted.score, 500);
+        const record = await page
+          .locator("#leaderboard-rows tr")
+          .nth(1)
+          .locator("td")
+          .allTextContents();
+        assert.deepEqual(record.slice(0, 3), ["MKY", "0500", posted.platform]);
+        assert.equal(record[3], "2ND");
+        await page.reload();
+        await page.waitForFunction(
+          () =>
+            document.querySelector("#leaderboard-rows tr:nth-child(2) td")
+              ?.textContent === "MKY",
+          undefined,
+          { polling: 100 },
+        );
+        await page.screenshot({
+          path: "/tmp/monkey-crossing-leaderboard.png",
+          fullPage: true,
+        });
+        assert.deepEqual(errors, []);
+        await page.close();
       },
     );
 

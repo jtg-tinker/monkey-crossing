@@ -25,9 +25,9 @@
         ><span>MONKEY<br />CROSSING</span></a
       >
       <span class="edition">A LITTLE JUNGLE. A LOT OF TRAFFIC.</span>
-      <button id="share" class="button small outline">
-        Share game <span aria-hidden="true">↗</span>
-      </button>
+      <a id="leaderboard-link" class="button small outline" href="#leaderboard">
+        Leaderboard <span aria-hidden="true">↓</span>
+      </a>
     </header>
     <main>
       <section class="intro" aria-labelledby="title">
@@ -83,6 +83,13 @@
                 <button id="start" class="button primary">
                   Let’s go bananas <span aria-hidden="true">→</span>
                 </button>
+                <a
+                  id="leaderboard-callout"
+                  class="leaderboard-callout"
+                  href="#leaderboard"
+                  hidden
+                  >NEW TOP MONKEY RUN! Enter 3 initials on the leaderboard.</a
+                >
                 <span id="overlay-hint" class="overlay-hint"
                   >ARROW KEYS / WASD / TOUCH CONTROLS</span
                 >
@@ -191,6 +198,63 @@
           <p class="pause-tip">NEED A BREATHER? PRESS <kbd>P</kbd></p>
         </aside>
       </div>
+      <section
+        id="leaderboard"
+        class="leaderboard"
+        aria-labelledby="leaderboard-title"
+      >
+        <div class="leaderboard-heading">
+          <div>
+            <p class="eyebrow">
+              <span class="status-dot"></span> PUBLIC ARCADE RECORDS
+            </p>
+            <h2 id="leaderboard-title">Top Monkey <span>Crossers</span></h2>
+          </div>
+          <p>
+            Three letters. One legendary run.<br />Only the 10 best crossers
+            make the board.
+          </p>
+        </div>
+        <div id="score-entry" class="score-entry" hidden>
+          <div>
+            <p class="eyebrow">NEW RECORD RUN</p>
+            <strong id="entry-score">0000</strong>
+            <span id="entry-platform">WEB</span>
+          </div>
+          <form id="score-form">
+            <label for="initials">ENTER INITIALS</label>
+            <input
+              id="initials"
+              name="initials"
+              type="text"
+              inputmode="text"
+              autocomplete="off"
+              autocapitalize="characters"
+              spellcheck="false"
+              maxlength="3"
+              placeholder="AAA"
+            />
+            <button class="button primary small" type="submit">
+              Post score
+            </button>
+          </form>
+          <p id="entry-message" role="status"></p>
+        </div>
+        <div class="board-shell">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">USER</th>
+                <th scope="col">SCORE</th>
+                <th scope="col">PLATFORM</th>
+                <th scope="col">RECORD</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboard-rows"></tbody>
+          </table>
+          <p id="leaderboard-status" role="status">LOADING TOP MONKEYS…</p>
+        </div>
+      </section>
       <footer class="page-footer">
         <span>BUILT FOR ONE MORE TRY.</span
         ><span>NO DOWNLOADS. JUST DODGING.</span>
