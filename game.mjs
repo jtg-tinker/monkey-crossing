@@ -1,0 +1,629 @@
+import {
+  SIZE,
+  CELL,
+  LANE_CONFIG,
+  ROUND_TIME,
+  laneObjects,
+  createState,
+  movePlayer,
+  step,
+} from "./core.mjs";
+
+const $ = (id) => document.getElementById(id);
+const canvas = $("game");
+const ctx = canvas.getContext("2d");
+ctx.imageSmoothingEnabled = false;
+let state = createState();
+let best = 0;
+let blood = true;
+let sound = false;
+try {
+  best = Number(localStorage.getItem("monkey-crossing-best")) || 0;
+  blood = localStorage.getItem("monkey-crossing-blood") !== "false";
+} catch {}
+let audio;
+let particles = [];
+let stains = [];
+let shake = 0;
+let announcementTimer;
+let toastTimer;
+let sceneryTime = 0;
+let lastTime = 0;
+let shareInFlight = false;
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const palette = ["#dd784c", "#eecf6e", "#8cabc0", "#e6e4cb"];
+
+function rect(x, y, w, h, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(Math.round(x), Math.round(y), w, h);
+}
+function ellipse(x, y, rx, ry, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+function text(value, x, y, size, color, align = "left") {
+  ctx.fillStyle = color;
+  ctx.font = `bold ${size}px monospace`;
+  ctx.textAlign = align;
+  ctx.fillText(value, x, y);
+}
+function save(key, value) {
+  try {
+    localStorage.setItem(key, String(value));
+  } catch {}
+}
+
+function playTone(type) {
+  if (!sound || !audio) return;
+  const notes = {
+    hop: [320, 470, 0.07],
+    car: [100, 32, 0.26],
+    water: [220, 55, 0.23],
+    goal: [570, 1140, 0.3],
+    time: [170, 70, 0.3],
+    start: [290, 580, 0.15],
+  };
+  const [from, to, duration] = notes[type] || notes.hop;
+  const oscillator = audio.createOscillator();
+  const gain = audio.createGain();
+  oscillator.type = type === "car" ? "sawtooth" : "square";
+  oscillator.frequency.setValueAtTime(from, audio.currentTime);
+  oscillator.frequency.exponentialRampToValueAtTime(
+    to,
+    audio.currentTime + duration,
+  );
+  gain.gain.setValueAtTime(0.035, audio.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + duration);
+  oscillator.connect(gain);
+  gain.connect(audio.destination);
+  oscillator.start();
+  oscillator.stop(audio.currentTime + duration);
+}
+
+function unlockAudio() {
+  if (!sound) return;
+  const Audio = window.AudioContext || window.webkitAudioContext;
+  if (!Audio) return;
+  audio ||= new Audio();
+  if (audio.state === "suspended") audio.resume().catch(() => {});
+}
+
+function banana(x, y, scale = 1) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  rect(-11, -10, 6, 16, "#ffe093");
+  rect(-8, 3, 8, 9, "#f5c34e");
+  rect(-2, 8, 15, 7, "#f5c34e");
+  rect(10, 2, 9, 9, "#f5c34e");
+  rect(16, -9, 6, 15, "#f5c34e");
+  rect(17, -14, 4, 6, "#6b532d");
+  rect(-11, -13, 5, 5, "#6b532d");
+  rect(-4, 6, 15, 3, "#ffe093");
+  ctx.restore();
+}
+
+function shrub(x, y, scale = 1) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  rect(-16, -5, 34, 15, "#456c42");
+  rect(-11, -14, 24, 25, "#456c42");
+  rect(-18, -3, 13, 9, "#365d3d");
+  rect(-7, -17, 13, 12, "#5a8045");
+  rect(8, -9, 8, 11, "#5a8045");
+  rect(-8, -9, 4, 4, "#75914c");
+  ctx.restore();
+}
+
+function drawGround() {
+  rect(0, 0, SIZE, SIZE, "#7e9958");
+  for (const row of [0, 3, 7, 11]) {
+    const y = row * CELL;
+    rect(0, y, SIZE, CELL, row === 0 ? "#527d49" : "#81995a");
+    rect(0, y + CELL - 5, SIZE, 5, "#58734b");
+    for (let i = 0; i < 35; i++) {
+      const x = (i * 97 + row * 43) % SIZE;
+      const ty = y + 8 + ((i * 17) % 42);
+      rect(x, ty, 3, 6, "#96ac68");
+      rect(x + 5, ty + 3, 3, 3, "#96ac68");
+    }
+  }
+  rect(0, CELL, SIZE, CELL * 2, "#4f9399");
+  for (let row = 1; row <= 2; row++) {
+    rect(0, row * CELL, SIZE, 4, "#437f86");
+    for (let i = 0; i < 21; i++) {
+      const x =
+        (((i * 79 + Math.sin(sceneryTime * 0.7 + i) * 13) % SIZE) + SIZE) %
+        SIZE;
+      const y = row * CELL + 14 + ((i * 19) % 42);
+      rect(x, y, 17 + (i % 3) * 5, 3, "#74acaa");
+      rect(x + 9, y + 5, 8, 2, "#639f9f");
+    }
+  }
+  for (const start of [4, 8]) {
+    rect(0, start * CELL, SIZE, CELL * 3, "#424c4b");
+    rect(0, start * CELL, SIZE, 5, "#b6b59a");
+    rect(0, (start + 3) * CELL - 5, SIZE, 5, "#b6b59a");
+    for (let line = 1; line < 3; line++)
+      for (let x = 15; x < SIZE; x += 70)
+        rect(x, (start + line) * CELL - 2, 32, 3, "#8b9281");
+    for (let i = 0; i < 18; i++)
+      rect(
+        (i * 139) % SIZE,
+        start * CELL + 13 + ((i * 31) % 165),
+        3,
+        3,
+        "#4a5551",
+      );
+  }
+  for (const row of [3, 7, 11]) {
+    shrub(17, row * CELL + 32, 1.2);
+    shrub(SIZE - 17, row * CELL + 35, 1.1);
+    if (row !== 11) {
+      shrub(115, row * CELL + 19, 0.55);
+      shrub(647, row * CELL + 19, 0.55);
+    }
+  }
+  for (let i = 0; i < 3; i++) {
+    const x = 160 + i * 224;
+    rect(x - 31, 7, 64, 49, "#3c6541");
+    rect(x - 27, 7, 56, 4, "#9caf64");
+    if (i < state.harvest) {
+      text("✓", x, 42, 32, "#f9d273", "center");
+    } else banana(x - 2, 26, 1.1);
+  }
+  shrub(31, 27, 1.4);
+  shrub(736, 29, 1.4);
+  text("BANANA GROVE", SIZE / 2, 60, 8, "#d2ddb0", "center");
+  text(
+    "↑  THE ONLY WAY IS UP  ↑",
+    SIZE / 2,
+    SIZE - 10,
+    10,
+    "#d4dfb2",
+    "center",
+  );
+}
+
+function drawLog(x, y, width) {
+  rect(x + 4, y + 13, width, 43, "#326c743d");
+  rect(x, y + 10, width, 40, "#75533a");
+  rect(x + 4, y + 7, width - 8, 43, "#aa7950");
+  rect(x + 7, y + 10, width - 14, 7, "#c89a64");
+  rect(x + 7, y + 43, width - 14, 7, "#815b3c");
+  rect(x + 6, y + 15, 8, 25, "#d4a673");
+  rect(x + width - 14, y + 15, 8, 25, "#d4a673");
+  for (let i = 26; i < width - 20; i += 31) {
+    rect(x + i, y + 23, 20, 3, "#825b3c");
+    rect(x + i + 7, y + 34, 12, 3, "#bf8b58");
+  }
+}
+
+function drawCar(x, y, width, direction, color) {
+  ctx.save();
+  if (direction < 0) {
+    ctx.translate(x + width, y);
+    ctx.scale(-1, 1);
+  } else ctx.translate(x, y);
+  rect(2, 17, width, 42, "#20332c55");
+  for (const wheel of [12, width - 25]) {
+    rect(wheel, 9, 16, 9, "#252e2d");
+    rect(wheel, 47, 16, 9, "#252e2d");
+  }
+  rect(0, 20, width, 25, "#c2bfa3");
+  rect(4, 14, width - 8, 37, color);
+  rect(8, 14, width - 20, 4, "#ffffff38");
+  rect(8, 47, width - 15, 4, "#00000022");
+  const cabin = width > 100 ? width - 39 : 28;
+  if (width > 100) {
+    rect(9, 18, width - 48, 27, "#e5dfc9");
+    rect(12, 20, width - 54, 4, "#fbf3d9");
+    for (let i = 18; i < width - 48; i += 12) rect(i, 24, 2, 18, "#c3c4b1");
+  } else {
+    rect(18, 20, 13, 25, "#243e42");
+    rect(21, 21, 3, 23, "#496669");
+  }
+  rect(cabin, 18, 21, 29, "#ffffff20");
+  rect(cabin + 16, 20, 9, 25, "#26484c");
+  rect(cabin + 17, 21, 3, 22, "#6b9492");
+  rect(width - 7, 17, 5, 8, "#ffecac");
+  rect(width - 7, 40, 5, 8, "#ffecac");
+  rect(3, 18, 4, 7, "#ae4b3d");
+  rect(3, 41, 4, 7, "#ae4b3d");
+  ctx.restore();
+}
+
+function drawMonkey(x, y) {
+  const hop = Math.sin((state.hop / 0.14) * Math.PI) * (reduceMotion ? 0 : 9);
+  ellipse(x, y + 20, 19 - hop * 0.3, 7, "#203a3155");
+  ctx.save();
+  ctx.translate(Math.round(x), Math.round(y - hop));
+  ctx.strokeStyle = "#774627";
+  ctx.lineWidth = 6;
+  ctx.lineCap = "square";
+  ctx.beginPath();
+  ctx.moveTo(11, 12);
+  ctx.lineTo(23, 14);
+  ctx.lineTo(27, 7);
+  ctx.lineTo(25, 1);
+  ctx.lineTo(20, 1);
+  ctx.stroke();
+  rect(-12, 9, 9, 14, "#704529");
+  rect(4, 9, 9, 14, "#704529");
+  rect(-12, 0, 25, 18, "#9c6034");
+  rect(-6, 1, 13, 16, "#d3a16b");
+  rect(-22, -15, 11, 17, "#965b33");
+  rect(13, -15, 11, 17, "#965b33");
+  rect(-19, -11, 6, 9, "#d99b74");
+  rect(15, -11, 6, 9, "#d99b74");
+  rect(-15, -23, 30, 28, "#965b33");
+  rect(-10, -28, 20, 7, "#965b33");
+  rect(-4, -32, 8, 7, "#774627");
+  rect(-11, -18, 22, 23, "#e8b783");
+  rect(-15, -10, 30, 10, "#e8b783");
+  rect(-9, -15, 6, 7, "#26372c");
+  rect(4, -15, 6, 7, "#26372c");
+  rect(-8, -15, 2, 2, "#fff0c7");
+  rect(5, -15, 2, 2, "#fff0c7");
+  rect(-2, -6, 5, 3, "#b47b52");
+  rect(-5, 0, 11, 2, "#774627");
+  rect(-17, 2, 6, 10, "#965b33");
+  rect(12, 2, 6, 10, "#965b33");
+  ctx.restore();
+}
+
+function burst(type) {
+  const x = state.player.x;
+  const y = state.player.row * CELL + CELL / 2;
+  const bloody = type === "car" && blood;
+  const colors = bloody
+    ? ["#a62628", "#bc3433", "#811f28", "#d44a3c"]
+    : type === "water"
+      ? ["#a2d8cc", "#d4ede0", "#6dbbb6"]
+      : ["#f6cd55", "#f7ecb4", "#ffffff"];
+  const amount = reduceMotion ? 10 : bloody ? 45 : 24;
+  for (let i = 0; i < amount; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const velocity = 35 + Math.random() * 190;
+    particles.push({
+      x,
+      y,
+      vx: Math.cos(angle) * velocity,
+      vy: Math.sin(angle) * velocity,
+      life: 0.4 + Math.random() * 0.5,
+      maxLife: 1,
+      size: 3 + Math.random() * 6,
+      color: colors[i % colors.length],
+    });
+  }
+  if (bloody) {
+    for (let i = 0; i < 20; i++)
+      stains.push({
+        x: x + (Math.random() - 0.5) * 86,
+        y: y + (Math.random() - 0.5) * 54,
+        size: 3 + Math.random() * 13,
+        life: 5,
+        color: colors[i % colors.length],
+      });
+  }
+  if (!reduceMotion && type === "car") shake = 0.24;
+}
+
+function announce(message) {
+  $("announcement").textContent = message;
+  $("announcement").classList.add("visible");
+  clearTimeout(announcementTimer);
+  announcementTimer = setTimeout(
+    () => $("announcement").classList.remove("visible"),
+    1700,
+  );
+}
+
+function handleEvent(type) {
+  if (type === "over") {
+    showOverlay(
+      "END OF THE ROAD",
+      "One more<br>monkey business?",
+      `You scored ${state.score} points and reached level ${state.level}.<br>The bananas aren’t going to collect themselves.`,
+      "Try again",
+    );
+    return;
+  }
+  playTone(type);
+  if (type === "goal")
+    announce(
+      state.harvest === 0
+        ? `LEVEL ${state.level} · PICKING UP SPEED`
+        : "BANANA HAUL! + BONUS",
+    );
+  else {
+    burst(type);
+    announce(
+      type === "car"
+        ? "OUCH. LOOK BOTH WAYS!"
+        : type === "water"
+          ? "MONKEYS NEED LOGS!"
+          : "OUT OF TIME!",
+    );
+  }
+  updateHUD();
+}
+
+function updateHUD() {
+  if (state.score > best) {
+    best = state.score;
+    save("monkey-crossing-best", best);
+  }
+  $("score").textContent = String(state.score).padStart(4, "0");
+  $("best").textContent = String(best).padStart(4, "0");
+  $("level").textContent = String(state.level).padStart(2, "0");
+  $("lives").textContent = Array.from({ length: 3 }, (_, i) =>
+    i < state.lives ? "●" : "○",
+  ).join(" ");
+  $("lives").setAttribute("aria-label", `${state.lives} lives`);
+  $("harvest").textContent = `${state.harvest} / 3`;
+  const seconds = Math.ceil(state.remaining);
+  $("time").textContent = `${seconds}s`;
+  $("timer").setAttribute("aria-valuenow", seconds);
+  $("timer-fill").style.width = `${(state.remaining / ROUND_TIME) * 100}%`;
+  $("timer-fill").style.background = seconds <= 10 ? "#e97a50" : "";
+  $("game-status").textContent = {
+    ready: "READY WHEN YOU ARE",
+    playing:
+      state.respawn > 0
+        ? "A LITTLE ROUGH OUT THERE"
+        : "NEXT STOP: BANANA GROVE",
+    paused: "TAKING A BREATHER",
+    over: "THERE’S ALWAYS ANOTHER WAY",
+  }[state.mode];
+  $("pause").disabled = state.mode === "ready" || state.mode === "over";
+  $("pause").textContent = state.mode === "paused" ? "▷" : "Ⅱ";
+  $("pause").setAttribute(
+    "aria-label",
+    state.mode === "paused" ? "Resume game" : "Pause game",
+  );
+  $("blood").setAttribute("aria-pressed", blood);
+  $("sound").setAttribute("aria-pressed", sound);
+}
+
+function showOverlay(label, title, description, button) {
+  $("overlay-label").textContent = label;
+  $("overlay-title").innerHTML = title;
+  $("overlay-description").innerHTML = description;
+  $("start").textContent = `${button} →`;
+  $("overlay-hint").textContent = "PRESS ENTER OR TAP THE BUTTON";
+  $("overlay").classList.remove("hidden");
+  $("start").focus({ preventScroll: true });
+  updateHUD();
+}
+
+function startGame() {
+  unlockAudio();
+  if (state.mode === "paused") state.mode = "playing";
+  else {
+    state = createState();
+    state.mode = "playing";
+    particles = [];
+    stains = [];
+    shake = 0;
+  }
+  $("overlay").classList.add("hidden");
+  $("announcement").classList.remove("visible");
+  canvas.focus({ preventScroll: true });
+  playTone("start");
+  updateHUD();
+}
+
+function pauseGame() {
+  if (state.mode === "paused") {
+    startGame();
+    return;
+  }
+  if (state.mode !== "playing") return;
+  state.mode = "paused";
+  showOverlay(
+    "TAKE YOUR TIME",
+    "Even monkeys<br>need a break.",
+    "Your commute can wait.<br>Pick up right where you left off.",
+    "Back to the jungle",
+  );
+}
+
+function move(direction) {
+  unlockAudio();
+  if (movePlayer(state, direction)) {
+    playTone("hop");
+    step(state, 0, handleEvent);
+    updateHUD();
+  }
+}
+
+function draw(dt) {
+  ctx.save();
+  if (shake > 0) {
+    ctx.translate(
+      (Math.random() - 0.5) * shake * 30,
+      (Math.random() - 0.5) * shake * 30,
+    );
+  }
+  drawGround();
+  for (const stain of stains) {
+    ctx.globalAlpha = Math.min(1, stain.life / 2) * 0.85;
+    rect(stain.x, stain.y, stain.size, stain.size * 0.7, stain.color);
+  }
+  ctx.globalAlpha = 1;
+  for (const lane of LANE_CONFIG) {
+    for (const object of laneObjects(
+      lane,
+      state.mode === "ready" ? sceneryTime : state.elapsed,
+      state.level,
+    )) {
+      if (lane.kind === "river")
+        drawLog(object.x, lane.row * CELL, object.width);
+      else
+        drawCar(
+          object.x,
+          lane.row * CELL,
+          object.width,
+          lane.speed,
+          palette[(lane.row + Math.floor(object.width)) % palette.length],
+        );
+    }
+  }
+  if (state.respawn === 0 && state.mode !== "over")
+    drawMonkey(state.player.x, state.player.row * CELL + 32);
+  for (const particle of particles) {
+    ctx.globalAlpha = Math.min(1, particle.life * 2);
+    rect(particle.x, particle.y, particle.size, particle.size, particle.color);
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+  if (state.mode !== "paused") {
+    for (const particle of particles) {
+      particle.x += particle.vx * dt;
+      particle.y += particle.vy * dt;
+      particle.vx *= Math.exp(-dt * 4);
+      particle.vy *= Math.exp(-dt * 4);
+      particle.life -= dt;
+    }
+    particles = particles.filter((particle) => particle.life > 0);
+    for (const stain of stains) stain.life -= dt;
+    stains = stains.filter((stain) => stain.life > 0);
+    shake = Math.max(0, shake - dt);
+  }
+}
+
+function frame(time) {
+  const dt = Math.min((time - (lastTime || time)) / 1000, 0.05);
+  lastTime = time;
+  if (state.mode !== "paused" && (!reduceMotion || state.mode === "playing"))
+    sceneryTime += dt;
+  let remaining = dt;
+  while (remaining > 0) {
+    const tick = Math.min(remaining, 1 / 120);
+    step(state, tick, handleEvent);
+    remaining -= tick;
+  }
+  draw(dt);
+  updateHUD();
+  requestAnimationFrame(frame);
+}
+
+$("start").addEventListener("click", startGame);
+$("pause").addEventListener("click", pauseGame);
+$("sound").addEventListener("click", () => {
+  sound = !sound;
+  unlockAudio();
+  playTone("hop");
+  updateHUD();
+});
+$("blood").addEventListener("click", () => {
+  blood = !blood;
+  save("monkey-crossing-blood", blood);
+  if (!blood) {
+    stains = [];
+    particles = [];
+  }
+  updateHUD();
+});
+const keys = {
+  ArrowUp: "up",
+  ArrowDown: "down",
+  ArrowLeft: "left",
+  ArrowRight: "right",
+  w: "up",
+  s: "down",
+  a: "left",
+  d: "right",
+};
+document.addEventListener("keydown", (event) => {
+  if (event.ctrlKey || event.metaKey || event.altKey) return;
+  const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+  if (keys[key] && state.mode === "playing") {
+    event.preventDefault();
+    move(keys[key]);
+  } else if ((key === "p" || key === "Escape") && !event.repeat) pauseGame();
+  else if (
+    key === "Enter" &&
+    state.mode !== "playing" &&
+    !event.repeat &&
+    (event.target === document.body || event.target === canvas)
+  ) {
+    event.preventDefault();
+    startGame();
+  }
+});
+for (const button of document.querySelectorAll("[data-direction]"))
+  button.addEventListener("click", () => move(button.dataset.direction));
+let swipe;
+canvas.addEventListener("pointerdown", (event) => {
+  swipe = { x: event.clientX, y: event.clientY };
+  canvas.setPointerCapture(event.pointerId);
+});
+canvas.addEventListener("pointerup", (event) => {
+  if (!swipe) return;
+  const dx = event.clientX - swipe.x;
+  const dy = event.clientY - swipe.y;
+  if (Math.max(Math.abs(dx), Math.abs(dy)) > 12)
+    move(
+      Math.abs(dx) > Math.abs(dy)
+        ? dx > 0
+          ? "right"
+          : "left"
+        : dy > 0
+          ? "down"
+          : "up",
+    );
+  swipe = null;
+});
+canvas.addEventListener("pointercancel", () => {
+  swipe = null;
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && state.mode === "playing") pauseGame();
+});
+window.addEventListener("blur", () => {
+  if (state.mode === "playing") pauseGame();
+});
+
+function toast(message) {
+  $("toast").textContent = message;
+  $("toast").classList.add("visible");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $("toast").classList.remove("visible"), 4200);
+}
+
+$("share").addEventListener("click", async () => {
+  if (shareInFlight) return;
+  if (
+    ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname) ||
+    location.protocol === "file:"
+  ) {
+    toast("This is a local preview. Publish the game to get a public link.");
+    return;
+  }
+  shareInFlight = true;
+  const url = location.href.split("#")[0];
+  try {
+    if (navigator.share)
+      await navigator.share({
+        title: "Monkey Crossing",
+        text: "Traffic is bananas. Can you beat my score?",
+        url,
+      });
+    else if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(url);
+      toast("Game link copied. Challenge a friend!");
+    } else window.prompt("Copy this link to share Monkey Crossing:", url);
+  } catch (error) {
+    if (error.name !== "AbortError")
+      window.prompt("Copy this link to share Monkey Crossing:", url);
+  } finally {
+    shareInFlight = false;
+  }
+});
+updateHUD();
+requestAnimationFrame(frame);

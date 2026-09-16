@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#183f35" />
+    <meta
+      name="description"
+      content="Small monkey. Big commute. Dodge traffic, ride the river, and chase bananas in this free browser arcade game."
+    />
+    <title>Monkey Crossing — A jungle commute</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23183f35'/%3E%3Ccircle cx='12' cy='32' r='10' fill='%23ac6b3c'/%3E%3Ccircle cx='52' cy='32' r='10' fill='%23ac6b3c'/%3E%3Ccircle cx='32' cy='30' r='23' fill='%23ac6b3c'/%3E%3Cellipse cx='32' cy='37' rx='17' ry='15' fill='%23edbe83'/%3E%3Ccircle cx='24' cy='29' r='3'/%3E%3Ccircle cx='40' cy='29' r='3'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="./" aria-label="Monkey Crossing home"
+        ><span class="brand-mark" aria-hidden="true">m<span>c</span></span
+        ><span>MONKEY<br />CROSSING</span></a
+      >
+      <span class="edition">A LITTLE JUNGLE. A LOT OF TRAFFIC.</span>
+      <button id="share" class="button small outline">
+        Share game <span aria-hidden="true">↗</span>
+      </button>
+    </header>
+    <main>
+      <section class="intro" aria-labelledby="title">
+        <div>
+          <p class="eyebrow">
+            <span class="status-dot"></span> THE JUNGLE ARCADE / NO. 001
+          </p>
+          <h1 id="title">Traffic is <em>bananas.</em></h1>
+          <p class="subtitle">
+            Small monkey. Big commute. Make it to the other side.
+          </p>
+        </div>
+        <div class="record">
+          <span>PERSONAL BEST</span><strong id="best">0000</strong
+          ><span>MAKE YOUR NEXT RUN COUNT</span>
+        </div>
+      </section>
+      <div class="game-layout">
+        <section class="arcade" aria-label="Monkey Crossing game">
+          <div class="scoreboard">
+            <div><span>SCORE</span><strong id="score">0000</strong></div>
+            <div><span>LEVEL</span><strong id="level">01</strong></div>
+            <div class="lives-stat">
+              <span>LIVES</span
+              ><strong id="lives" aria-label="3 lives">● ● ●</strong>
+            </div>
+            <button
+              id="pause"
+              class="icon-button"
+              aria-label="Pause game"
+              title="Pause (P)"
+            >
+              Ⅱ
+            </button>
+          </div>
+          <div class="game-screen" id="game-screen">
+            <canvas
+              id="game"
+              width="768"
+              height="768"
+              tabindex="0"
+              aria-label="Monkey Crossing. Move with arrow keys or WASD. Avoid cars, ride logs, and reach the banana grove."
+            ></canvas>
+            <div id="overlay" class="overlay">
+              <div class="overlay-card">
+                <span id="overlay-label" class="eyebrow"
+                  >WELCOME TO RUSH HOUR</span
+                >
+                <h2 id="overlay-title">Jungle rules.<br />City streets.</h2>
+                <p id="overlay-description">
+                  Dodge the cars. Hop on the logs.<br />Bring home the bananas.
+                </p>
+                <button id="start" class="button primary">
+                  Let’s go bananas <span aria-hidden="true">→</span>
+                </button>
+                <span id="overlay-hint" class="overlay-hint"
+                  >ARROW KEYS / WASD / TOUCH CONTROLS</span
+                >
+              </div>
+            </div>
+            <div
+              id="announcement"
+              class="announcement"
+              aria-live="polite"
+            ></div>
+          </div>
+          <div
+            class="timer-track"
+            role="progressbar"
+            aria-label="Time remaining"
+            aria-valuemin="0"
+            aria-valuemax="60"
+            aria-valuenow="60"
+            id="timer"
+          >
+            <div id="timer-fill"></div>
+          </div>
+          <div class="game-footer">
+            <span
+              ><span class="status-dot"></span>
+              <span id="game-status">READY WHEN YOU ARE</span></span
+            ><span id="time">60s</span>
+          </div>
+        </section>
+        <div class="touch-controls" aria-label="Movement controls">
+          <button data-direction="left" aria-label="Move left">←</button>
+          <div>
+            <button data-direction="up" aria-label="Move up">↑</button
+            ><button data-direction="down" aria-label="Move down">↓</button>
+          </div>
+          <button data-direction="right" aria-label="Move right">→</button>
+        </div>
+        <aside class="sidebar">
+          <section class="mission">
+            <p class="eyebrow">YOUR VERY IMPORTANT MISSION</p>
+            <h2>Go for<br />the <span>gold.</span></h2>
+            <div class="banana-art" aria-hidden="true">
+              <svg viewBox="0 0 180 100">
+                <path
+                  d="M36 19C37 71 98 87 145 33C127 96 51 116 21 55Z"
+                  fill="#e5a531"
+                />
+                <path
+                  d="M36 19C49 62 106 70 145 33C118 86 47 100 25 50Z"
+                  fill="#f6cd55"
+                />
+                <path
+                  d="M37 22C51 60 95 65 126 48"
+                  fill="none"
+                  stroke="#ffeaa3"
+                  stroke-width="5"
+                  stroke-linecap="round"
+                />
+                <path
+                  d="m30 30 6-16 7 3-4 15M139 37l7-10 6 4-8 11"
+                  fill="#183f35"
+                />
+              </svg>
+            </div>
+            <p>Cross the road. Ride the river.<br />Reach the banana grove.</p>
+            <div class="harvest">
+              <span id="harvest">0 / 3</span
+              ><span>CROSSINGS TO NEXT LEVEL</span>
+            </div>
+          </section>
+          <section class="how-to">
+            <p class="eyebrow">THE SURVIVAL GUIDE</p>
+            <div class="guide-row">
+              <span class="guide-number">01</span>
+              <p>
+                <strong>Keep it moving.</strong>Arrow keys or WASD to hop. Swipe
+                or use the buttons on mobile.
+              </p>
+            </div>
+            <div class="guide-row">
+              <span class="guide-number">02</span>
+              <p>
+                <strong>Look both ways.</strong>Cars don’t stop for monkeys. You
+                have three lives. Use them wisely.
+              </p>
+            </div>
+            <div class="guide-row">
+              <span class="guide-number">03</span>
+              <p>
+                <strong>Logs are your friends.</strong>The river? Not so much.
+                Stay on a log, and don’t drift off-screen.
+              </p>
+            </div>
+          </section>
+          <div class="settings">
+            <button id="sound" class="setting" aria-pressed="false">
+              <span>Sound effects</span
+              ><span class="switch" aria-hidden="true"></span></button
+            ><button id="blood" class="setting" aria-pressed="true">
+              <span>Blood effects <small>cartoon</small></span
+              ><span class="switch" aria-hidden="true"></span>
+            </button>
+          </div>
+          <p class="pause-tip">NEED A BREATHER? PRESS <kbd>P</kbd></p>
+        </aside>
+      </div>
+      <footer class="page-footer">
+        <span>BUILT FOR ONE MORE TRY.</span
+        ><span>NO DOWNLOADS. JUST DODGING.</span>
+      </footer>
+      <div id="toast" class="toast" role="status"></div>
+    </main>
+    <script type="module" src="./game.mjs"></script>
+  </body>
+</html>
