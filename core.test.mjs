@@ -79,18 +79,112 @@ test("drifting outside the river boundary is fatal", () => {
   assert.equal(hazardAt({ row: 2, x: SIZE + 1 }, 0, 1), "water");
 });
 
-test("three crossings award bonuses and advance the level", () => {
-  const state = playing();
-  const events = [];
-  for (let i = 0; i < 3; i++) {
-    state.player.row = 0;
-    step(state, 0, (event) => events.push(event));
+test("each banana is collected from its own location", () => {
+  for (const [index, x] of [160, 384, 608].entries()) {
+    const state = playing();
+    state.player = { x, row: 0 };
+    step(state, 0);
+    assert.deepEqual(
+      state.collectedBananas,
+      [0, 1, 2].map((slot) => slot === index),
+    );
+    assert.equal(state.harvest, 1);
+    assert.equal(state.score, 220);
     assert.equal(state.player.row, 11);
   }
-  assert.equal(state.level, 2);
+});
+
+test("revisiting an empty spot does not collect another banana", () => {
+  const state = playing();
+  const events = [];
+  state.player = { x: 608, row: 0 };
+  step(state, 0, (event) => events.push(event));
+  const score = state.score;
+  state.player = { x: 608, row: 0 };
+  step(state, 0, (event) => events.push(event));
+  step(state, 0.5, (event) => events.push(event));
+  assert.equal(state.harvest, 1);
+  assert.equal(state.score, score);
+  assert.equal(state.player.row, 0);
+  assert.equal(state.lives, 3);
+  assert.deepEqual(state.collectedBananas, [false, false, true]);
+  assert.deepEqual(events, ["goal"]);
+});
+
+test("reaching the grove between banana spots does not collect one", () => {
+  for (const x of [32, 96, 256, 480, 736]) {
+    const state = playing();
+    state.player = { x, row: 0 };
+    step(state, 0);
+    assert.equal(state.harvest, 0);
+    assert.equal(state.score, 0);
+    assert.equal(state.player.row, 0);
+    assert.equal(state.lives, 3);
+  }
+});
+
+test("collection respects the width of each visible banana spot", () => {
+  for (const center of [160, 384, 608]) {
+    for (const offset of [-32, 32, -32.1, 32.1]) {
+      const state = playing();
+      state.player = { x: center + offset, row: 0 };
+      step(state, 0);
+      assert.equal(state.harvest, Math.abs(offset) <= 32 ? 1 : 0);
+    }
+  }
+});
+
+test("the monkey can move along the grove to an uncollected banana", () => {
+  const state = playing();
+  state.player = { x: 256, row: 0 };
+  movePlayer(state, "right");
+  step(state, 0);
   assert.equal(state.harvest, 0);
+  state.cooldown = 0;
+  movePlayer(state, "right");
+  step(state, 0);
+  assert.equal(state.harvest, 1);
+  assert.deepEqual(state.collectedBananas, [false, true, false]);
+});
+
+test("collected spots stay empty after losing a life", () => {
+  const state = playing();
+  state.player = { x: 384, row: 0 };
+  step(state, 0);
+  state.remaining = 0;
+  step(state, 0);
+  step(state, 1.1);
+  assert.equal(state.lives, 2);
+  assert.equal(state.player.row, 11);
+  assert.equal(state.harvest, 1);
+  assert.deepEqual(state.collectedBananas, [false, true, false]);
+});
+
+test("all three distinct bananas reset together for the next level", () => {
+  const state = playing();
+  const events = [];
+  for (const [index, x] of [608, 160, 384].entries()) {
+    state.player = { x, row: 0 };
+    step(state, 0, (event) => events.push(event));
+    assert.equal(state.player.row, 11);
+    assert.equal(state.level, index === 2 ? 2 : 1);
+    assert.equal(state.harvest, (index + 1) % 3);
+  }
   assert.equal(state.score, 660);
+  assert.deepEqual(state.collectedBananas, [false, false, false]);
   assert.deepEqual(events, ["goal", "goal", "goal"]);
+  state.player = { x: 608, row: 0 };
+  step(state, 0);
+  assert.equal(state.harvest, 1);
+  assert.deepEqual(state.collectedBananas, [false, false, true]);
+});
+
+test("new games have independent, fully stocked banana spots", () => {
+  const state = playing();
+  state.player = { x: 160, row: 0 };
+  step(state, 0);
+  assert.deepEqual(createState().collectedBananas, [false, false, false]);
+  assert.deepEqual(state.collectedBananas, [true, false, false]);
 });
 
 test("timer expiry leads to game over on the final life", () => {

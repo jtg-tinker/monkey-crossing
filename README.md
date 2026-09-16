@@ -10,7 +10,7 @@ A Frogger-style browser arcade game built with HTML, CSS, and JavaScript Canvas.
 - Cartoon blood splatter on car impacts, with a toggle to turn it off.
 - Keyboard controls, mobile swipe gestures, and on-screen movement buttons.
 - Three lives, a 60-second timer per attempt, and progressively faster traffic.
-- A new level every three successful crossings.
+- Collect the left, middle, and right banana spots to advance a level; each stays empty until all three are collected.
 - Points for forward progress and successful crossings, plus a remaining-time bonus.
 - Personal best scores and the blood-effects preference saved locally in your browser.
 - Optional synthesized sound effects, pause/resume, and reduced-motion support.
@@ -20,7 +20,9 @@ Blood effects are on by default; sound effects are off. Both can be changed besi
 
 ## How to play
 
-Reach the banana grove at the top of the screen. Avoid vehicles, stay on logs in the river, and don't drift off-screen. A collision, fall into the water, or expired timer costs one life. Lose all three lives and your run ends.
+Reach the banana grove at the top of the screen and move onto a banana spot to collect it. The banana disappears from that exact spot, which stays empty even if you lose a life. Empty spots and gaps do not award another banana; you can move along the grove to reach an uncollected one. Collect all three spots to advance to the next level and refill the grove.
+
+Avoid vehicles, stay on logs in the river, and don't drift off-screen. A collision, fall into the water, or expired timer costs one life. Lose all three lives and your run ends.
 
 | Action                | Control                                              |
 | --------------------- | ---------------------------------------------------- |

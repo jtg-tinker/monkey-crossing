@@ -2,6 +2,7 @@ export const SIZE = 768;
 export const CELL = 64;
 export const COLS = 12;
 export const ROUND_TIME = 60;
+export const BANANA_SPOTS = [160, 384, 608];
 export const LANE_CONFIG = [
   { row: 1, kind: "river", speed: 73, width: 178, gap: 94, offset: 24 },
   { row: 2, kind: "river", speed: -58, width: 216, gap: 92, offset: 85 },
@@ -54,6 +55,7 @@ export function createState() {
     level: 1,
     lives: 3,
     harvest: 0,
+    collectedBananas: BANANA_SPOTS.map(() => false),
     remaining: ROUND_TIME,
     elapsed: 0,
     furthest: 11,
@@ -122,11 +124,17 @@ export function step(state, dt, onEvent = () => {}) {
     state.respawn = 1.05;
     onEvent(hazard);
   } else if (state.player.row === 0) {
+    const index = BANANA_SPOTS.findIndex(
+      (x) => Math.abs(state.player.x - x) <= CELL / 2,
+    );
+    if (index === -1 || state.collectedBananas[index]) return;
+    state.collectedBananas[index] = true;
     state.score += 100 + Math.ceil(state.remaining) * 2;
     state.harvest++;
-    if (state.harvest === 3) {
+    if (state.harvest === BANANA_SPOTS.length) {
       state.level++;
       state.harvest = 0;
+      state.collectedBananas.fill(false);
     }
     resetPlayer(state);
     state.cooldown = 0.3;

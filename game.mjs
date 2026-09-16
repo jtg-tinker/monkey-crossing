@@ -3,6 +3,7 @@ import {
   CELL,
   LANE_CONFIG,
   ROUND_TIME,
+  BANANA_SPOTS,
   laneObjects,
   createState,
   movePlayer,
@@ -167,13 +168,10 @@ function drawGround() {
       shrub(647, row * CELL + 19, 0.55);
     }
   }
-  for (let i = 0; i < 3; i++) {
-    const x = 160 + i * 224;
+  for (const [index, x] of BANANA_SPOTS.entries()) {
     rect(x - 31, 7, 64, 49, "#3c6541");
     rect(x - 27, 7, 56, 4, "#9caf64");
-    if (i < state.harvest) {
-      text("✓", x, 42, 32, "#f9d273", "center");
-    } else banana(x - 2, 26, 1.1);
+    if (!state.collectedBananas[index]) banana(x - 2, 26, 1.1);
   }
   shrub(31, 27, 1.4);
   shrub(736, 29, 1.4);
@@ -364,7 +362,7 @@ function updateHUD() {
     i < state.lives ? "●" : "○",
   ).join(" ");
   $("lives").setAttribute("aria-label", `${state.lives} lives`);
-  $("harvest").textContent = `${state.harvest} / 3`;
+  $("harvest").textContent = `${state.harvest} / ${BANANA_SPOTS.length}`;
   const seconds = Math.ceil(state.remaining);
   $("time").textContent = `${seconds}s`;
   $("timer").setAttribute("aria-valuenow", seconds);

@@ -54,6 +54,97 @@ test("browser gameplay and responsive interface", async (t) => {
   });
   try {
     await t.test(
+      "banana spots empty in collection order and refill together",
+      async () => {
+        const page = await browser.newPage({
+          viewport: { width: 1440, height: 1000 },
+        });
+        const errors = [];
+        page.on("pageerror", (error) => errors.push(error.message));
+        await page.route(
+          (url) => url.pathname.endsWith("/core.mjs") && !url.search,
+          (route) =>
+            route.fulfill({
+              contentType: "text/javascript",
+              body: `
+          export * from "./core.mjs?banana-test";
+          import { createState as originalCreateState } from "./core.mjs?banana-test";
+          export function createState() {
+            const state = originalCreateState();
+            globalThis.bananaTestState = state;
+            return state;
+          }
+        `,
+            }),
+        );
+        await prepare(page);
+        await page.click("#start");
+        const emptySpots = () =>
+          page.evaluate(() => {
+            const context = document.getElementById("game").getContext("2d");
+            return [160, 384, 608].map((x) => {
+              const { data } = context.getImageData(x - 24, 14, 48, 31);
+              for (let i = 0; i < data.length; i += 4) {
+                if (data[i] !== 60 || data[i + 1] !== 101 || data[i + 2] !== 65)
+                  return false;
+              }
+              return true;
+            });
+          });
+        const collectAt = async (x) => {
+          await page.evaluate((position) => {
+            bananaTestState.player = { x: position, row: 1 };
+            bananaTestState.cooldown = 0;
+            bananaTestState.furthest = 1;
+          }, x);
+          await page.keyboard.press("ArrowUp");
+          await advance(page, 1);
+        };
+        assert.deepEqual(await emptySpots(), [false, false, false]);
+        await collectAt(608);
+        assert.deepEqual(await emptySpots(), [false, false, true]);
+        assert.equal(await page.textContent("#harvest"), "1 / 3");
+        await page.keyboard.press("p");
+        await advance(page, 30);
+        await page.click("#start");
+        assert.deepEqual(await emptySpots(), [false, false, true]);
+        await page.evaluate(() => {
+          bananaTestState.remaining = 0;
+        });
+        await advance(page, 70);
+        assert.equal(
+          await page.getAttribute("#lives", "aria-label"),
+          "2 lives",
+        );
+        assert.deepEqual(await emptySpots(), [false, false, true]);
+        await collectAt(608);
+        assert.equal(await page.textContent("#harvest"), "1 / 3");
+        await advance(page);
+        await page.keyboard.press("ArrowRight");
+        await advance(page, 1);
+        assert.deepEqual(await emptySpots(), [false, false, true]);
+        await collectAt(160);
+        assert.equal(await page.textContent("#harvest"), "2 / 3");
+        assert.deepEqual(await emptySpots(), [true, false, true]);
+        await page.screenshot({
+          path: "/tmp/monkey-crossing-bananas.png",
+          fullPage: true,
+        });
+        await collectAt(384);
+        assert.equal(await page.textContent("#level"), "02");
+        assert.equal(await page.textContent("#harvest"), "0 / 3");
+        assert.deepEqual(await emptySpots(), [false, false, false]);
+        await collectAt(160);
+        await page.reload();
+        await advance(page, 1);
+        assert.equal(await page.textContent("#level"), "01");
+        assert.equal(await page.textContent("#harvest"), "0 / 3");
+        assert.deepEqual(await emptySpots(), [false, false, false]);
+        assert.deepEqual(errors, []);
+        await page.close();
+      },
+    );
+    await t.test(
       "vivid level palette keeps the page styling unchanged",
       async () => {
         const page = await browser.newPage({
