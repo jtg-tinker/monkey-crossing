@@ -31,7 +31,7 @@ let sceneryTime = 0;
 let lastTime = 0;
 let shareInFlight = false;
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
-const palette = ["#dd784c", "#eecf6e", "#8cabc0", "#e6e4cb"];
+const palette = ["#f06b24", "#ffc52e", "#176fc1", "#f7e9bb"];
 
 function rect(x, y, w, h, color) {
   ctx.fillStyle = color;
@@ -109,54 +109,54 @@ function shrub(x, y, scale = 1) {
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(scale, scale);
-  rect(-16, -5, 34, 15, "#456c42");
-  rect(-11, -14, 24, 25, "#456c42");
-  rect(-18, -3, 13, 9, "#365d3d");
-  rect(-7, -17, 13, 12, "#5a8045");
-  rect(8, -9, 8, 11, "#5a8045");
-  rect(-8, -9, 4, 4, "#75914c");
+  rect(-16, -5, 34, 15, "#307638");
+  rect(-11, -14, 24, 25, "#307638");
+  rect(-18, -3, 13, 9, "#205d32");
+  rect(-7, -17, 13, 12, "#4b9236");
+  rect(8, -9, 8, 11, "#4b9236");
+  rect(-8, -9, 4, 4, "#8fba43");
   ctx.restore();
 }
 
 function drawGround() {
-  rect(0, 0, SIZE, SIZE, "#7e9958");
+  rect(0, 0, SIZE, SIZE, "#75a53c");
   for (const row of [0, 3, 7, 11]) {
     const y = row * CELL;
-    rect(0, y, SIZE, CELL, row === 0 ? "#527d49" : "#81995a");
-    rect(0, y + CELL - 5, SIZE, 5, "#58734b");
+    rect(0, y, SIZE, CELL, row === 0 ? "#397e38" : "#75a53c");
+    rect(0, y + CELL - 5, SIZE, 5, "#477532");
     for (let i = 0; i < 35; i++) {
       const x = (i * 97 + row * 43) % SIZE;
       const ty = y + 8 + ((i * 17) % 42);
-      rect(x, ty, 3, 6, "#96ac68");
-      rect(x + 5, ty + 3, 3, 3, "#96ac68");
+      rect(x, ty, 3, 6, "#a3ca58");
+      rect(x + 5, ty + 3, 3, 3, "#a3ca58");
     }
   }
-  rect(0, CELL, SIZE, CELL * 2, "#4f9399");
+  rect(0, CELL, SIZE, CELL * 2, "#168f9b");
   for (let row = 1; row <= 2; row++) {
-    rect(0, row * CELL, SIZE, 4, "#437f86");
+    rect(0, row * CELL, SIZE, 4, "#106e7b");
     for (let i = 0; i < 21; i++) {
       const x =
         (((i * 79 + Math.sin(sceneryTime * 0.7 + i) * 13) % SIZE) + SIZE) %
         SIZE;
       const y = row * CELL + 14 + ((i * 19) % 42);
-      rect(x, y, 17 + (i % 3) * 5, 3, "#74acaa");
-      rect(x + 9, y + 5, 8, 2, "#639f9f");
+      rect(x, y, 17 + (i % 3) * 5, 3, "#60c8c4");
+      rect(x + 9, y + 5, 8, 2, "#39b2b4");
     }
   }
   for (const start of [4, 8]) {
-    rect(0, start * CELL, SIZE, CELL * 3, "#424c4b");
-    rect(0, start * CELL, SIZE, 5, "#b6b59a");
-    rect(0, (start + 3) * CELL - 5, SIZE, 5, "#b6b59a");
+    rect(0, start * CELL, SIZE, CELL * 3, "#20282e");
+    rect(0, start * CELL, SIZE, 5, "#c9c5a0");
+    rect(0, (start + 3) * CELL - 5, SIZE, 5, "#c9c5a0");
     for (let line = 1; line < 3; line++)
       for (let x = 15; x < SIZE; x += 70)
-        rect(x, (start + line) * CELL - 2, 32, 3, "#8b9281");
+        rect(x, (start + line) * CELL - 2, 32, 3, "#b5bba7");
     for (let i = 0; i < 18; i++)
       rect(
         (i * 139) % SIZE,
         start * CELL + 13 + ((i * 31) % 165),
         3,
         3,
-        "#4a5551",
+        "#2b353c",
       );
   }
   for (const row of [3, 7, 11]) {

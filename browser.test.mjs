@@ -54,6 +54,43 @@ test("browser gameplay and responsive interface", async (t) => {
   });
   try {
     await t.test(
+      "vivid level palette keeps the page styling unchanged",
+      async () => {
+        const page = await browser.newPage({
+          viewport: { width: 1440, height: 1000 },
+        });
+        await prepare(page);
+        await page.click("#start");
+        await advance(page, 1);
+        const colors = await page.evaluate(() => {
+          const context = document.getElementById("game").getContext("2d");
+          const pixel = (x, y) =>
+            Array.from(context.getImageData(x, y, 1, 1).data).slice(0, 3);
+          return {
+            road: pixel(50, 310),
+            blue: pixel(30, 344),
+            orange: pixel(174, 288),
+            yellow: pixel(310, 608),
+            page: getComputedStyle(document.body).backgroundColor,
+            heading: getComputedStyle(document.querySelector("h1 em")).color,
+          };
+        });
+        assert.deepEqual(colors, {
+          road: [32, 40, 46],
+          blue: [23, 111, 193],
+          orange: [240, 107, 36],
+          yellow: [255, 197, 46],
+          page: "rgb(245, 242, 233)",
+          heading: "rgb(215, 105, 54)",
+        });
+        await page.screenshot({
+          path: "/tmp/monkey-crossing-level.png",
+          fullPage: true,
+        });
+        await page.close();
+      },
+    );
+    await t.test(
       "desktop start, movement, pause, collisions, blood, game over and restart",
       async () => {
         const page = await browser.newPage({
