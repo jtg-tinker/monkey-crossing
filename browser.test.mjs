@@ -303,6 +303,8 @@ test("browser gameplay and responsive interface", async (t) => {
           isMobile: true,
           hasTouch: true,
           deviceScaleFactor: 2,
+          userAgent:
+            "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36",
         });
         const page = await context.newPage();
         const errors = [];
@@ -341,6 +343,7 @@ test("browser gameplay and responsive interface", async (t) => {
           const stylesheet = await (await fetch("./style.css")).text();
           const select = new Event("selectstart", { cancelable: true });
           const context = new Event("contextmenu", { cancelable: true });
+          const drag = new Event("dragstart", { cancelable: true });
           return {
             userSelect: style.userSelect,
             webkitUserSelect: style.webkitUserSelect,
@@ -348,6 +351,8 @@ test("browser gameplay and responsive interface", async (t) => {
             touchAction: style.touchAction,
             selectPrevented: !game.dispatchEvent(select),
             contextPrevented: !game.dispatchEvent(context),
+            dragPrevented: !game.dispatchEvent(drag),
+            androidAgent: navigator.userAgent.includes("Android"),
           };
         });
         assert.deepEqual(interaction, {
@@ -357,6 +362,8 @@ test("browser gameplay and responsive interface", async (t) => {
           touchAction: "none",
           selectPrevented: true,
           contextPrevented: true,
+          dragPrevented: true,
+          androidAgent: true,
         });
         for (const width of [320, 390, 640, 768]) {
           await page.setViewportSize({ width, height: 900 });

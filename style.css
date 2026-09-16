@@ -244,6 +244,9 @@ h1 em {
   border-radius: 5px;
   background: #779554;
   aspect-ratio: 1;
+}
+.game-screen,
+.game-screen * {
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
