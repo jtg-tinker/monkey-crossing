@@ -4,6 +4,7 @@ import {
   SIZE,
   CELL,
   LANE_CONFIG,
+  COIN_COUNT,
   MAX_GRENADES,
   laneObjects,
   hazardAt,
@@ -27,7 +28,7 @@ test("starts with three lives, a full timer, and a safe monkey", () => {
   const state = createState();
   assert.equal(state.lives, 3);
   assert.equal(state.remaining, 60);
-  assert.equal(state.coin, null);
+  assert.deepEqual(state.coins, []);
   assert.equal(state.launcher, 0);
   assert.equal(state.grenade, null);
   assert.deepEqual(state.wrecks, []);
@@ -224,38 +225,44 @@ test("pausing freezes gameplay and ignores moves", () => {
   assert.deepEqual(state, snapshot);
 });
 
-test("coins spawn on road lanes and expire uncollected", () => {
+test("two coins spawn on road lanes and expire uncollected", () => {
   const state = playing();
   state.coinTimer = 0.01;
   const events = [];
   step(state, 0.02, (event) => events.push(event));
-  assert.ok(state.coin);
-  assert.ok(
-    LANE_CONFIG.filter((lane) => lane.kind === "road")
-      .map((lane) => lane.row)
-      .includes(state.coin.row),
+  assert.equal(state.coins.length, COIN_COUNT);
+  for (const coin of state.coins) {
+    assert.ok(
+      LANE_CONFIG.filter((lane) => lane.kind === "road")
+        .map((lane) => lane.row)
+        .includes(coin.row),
+    );
+    assert.ok(coin.x > 0 && coin.x < SIZE);
+  }
+  assert.equal(
+    new Set(state.coins.map((coin) => `${coin.row}:${coin.x}`)).size,
+    COIN_COUNT,
   );
-  assert.ok(state.coin.x > 0 && state.coin.x < SIZE);
   assert.deepEqual(events, ["coin-spawn"]);
   state.player = { row: 0, x: 96 };
-  state.coin.ttl = 0.05;
+  for (const coin of state.coins) coin.ttl = 0.05;
   step(state, 0.1);
-  assert.equal(state.coin, null);
+  assert.deepEqual(state.coins, []);
 });
 
 test("grabbing a lane coin arms the grenade launcher", () => {
   const state = playing();
   const lane = LANE_CONFIG.find((item) => item.row === 8);
   const x = emptyRoadX(lane);
-  state.coin = { row: 8, x, ttl: 5 };
+  state.coins = [{ row: 8, x, ttl: 5 }];
   state.player = { row: 8, x };
   const events = [];
   step(state, 0, (event) => events.push(event));
   assert.equal(state.launcher, 1);
-  assert.equal(state.coin, null);
+  assert.deepEqual(state.coins, []);
   assert.deepEqual(events, ["coin"]);
   state.launcher = MAX_GRENADES;
-  state.coin = { row: 8, x, ttl: 5 };
+  state.coins = [{ row: 8, x, ttl: 5 }];
   step(state, 0);
   assert.equal(state.launcher, MAX_GRENADES);
 });

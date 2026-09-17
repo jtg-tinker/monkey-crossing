@@ -590,7 +590,7 @@ function handleEvent(type, data) {
   }
   if (type === "coin-spawn") {
     playTone("coin-spawn");
-    announce("GOLD COIN IN THE LANES!");
+    announce("GOLD COINS IN THE LANES!");
     return;
   }
   if (type === "coin") {
@@ -786,7 +786,7 @@ function draw(dt) {
         );
     }
   }
-  if (state.coin) drawCoin(state.coin.x, state.coin.row * CELL + CELL / 2);
+  for (const coin of state.coins) drawCoin(coin.x, coin.row * CELL + CELL / 2);
   if (state.respawn === 0 && state.mode !== "over")
     drawMonkey(state.player.x, state.player.row * CELL + 32);
   if (state.grenade) drawGrenade(state.grenade.x, state.grenade.y);

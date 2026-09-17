@@ -222,11 +222,17 @@ test("browser gameplay and responsive interface", async (t) => {
           false,
         );
         await page.evaluate(() => {
-          shooterTestState.coin = {
-            row: shooterTestState.player.row,
-            x: shooterTestState.player.x,
-            ttl: 10,
-          };
+          shooterTestState.coinTimer = 0;
+        });
+        await advance(page, 1);
+        assert.equal(
+          await page.evaluate(() => shooterTestState.coins.length),
+          2,
+          "two coins are visible after each spawn",
+        );
+        await page.evaluate(() => {
+          shooterTestState.coins[0].row = shooterTestState.player.row;
+          shooterTestState.coins[0].x = shooterTestState.player.x;
         });
         await advance(page, 1);
         assert.equal(await page.textContent("#shots"), "● ○ ○");

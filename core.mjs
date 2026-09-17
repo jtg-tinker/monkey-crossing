@@ -3,6 +3,7 @@ export const CELL = 64;
 export const COLS = 12;
 export const ROUND_TIME = 60;
 export const COIN_TTL = 12;
+export const COIN_COUNT = 2;
 export const GRENADE_SPEED = 540;
 export const MAX_GRENADES = 3;
 export const BANANA_SPOTS = [160, 384, 608];
@@ -70,7 +71,7 @@ export function createState() {
     cooldown: 0,
     respawn: 0,
     hop: 0,
-    coin: null,
+    coins: [],
     coinTimer: 5,
     launcher: 0,
     grenade: null,
@@ -141,28 +142,31 @@ export function step(state, dt, onEvent = () => {}) {
   if (lane?.kind === "river")
     state.player.x +=
       lane.speed * (1 + Math.min(state.level - 1, 12) * 0.1) * dt;
-  if (state.coin) {
-    state.coin.ttl -= dt;
-    if (state.coin.ttl <= 0) state.coin = null;
-    else if (
-      state.coin.row === state.player.row &&
-      Math.abs(state.coin.x - state.player.x) <= CELL / 2
-    ) {
-      state.coin = null;
-      state.launcher = Math.min(state.launcher + 1, MAX_GRENADES);
-      onEvent("coin");
-    }
-  } else {
+  state.coins = state.coins.filter((coin) => (coin.ttl -= dt) > 0);
+  const collected = state.coins.find(
+    (coin) =>
+      coin.row === state.player.row &&
+      Math.abs(coin.x - state.player.x) <= CELL / 2,
+  );
+  if (collected) {
+    state.coins = state.coins.filter((coin) => coin !== collected);
+    state.launcher = Math.min(state.launcher + 1, MAX_GRENADES);
+    onEvent("coin");
+  }
+  if (!state.coins.length) {
     state.coinTimer -= dt;
     if (state.coinTimer <= 0) {
-      const rows = LANE_CONFIG.filter((item) => item.kind === "road").map(
-        (item) => item.row,
+      const spots = LANE_CONFIG.filter((item) => item.kind === "road").flatMap(
+        (lane) =>
+          Array.from({ length: COLS }, (_, column) => ({
+            row: lane.row,
+            x: CELL / 2 + CELL * column,
+          })),
       );
-      state.coin = {
-        row: rows[Math.floor(Math.random() * rows.length)],
-        x: CELL / 2 + CELL * Math.floor(Math.random() * COLS),
+      state.coins = Array.from({ length: COIN_COUNT }, () => ({
+        ...spots.splice(Math.floor(Math.random() * spots.length), 1)[0],
         ttl: COIN_TTL,
-      };
+      }));
       state.coinTimer = 9 + Math.random() * 7;
       onEvent("coin-spawn");
     }
