@@ -61,6 +61,10 @@
           <div class="scoreboard">
             <div><span>SCORE</span><strong id="score">0000</strong></div>
             <div><span>LEVEL</span><strong id="level">01</strong></div>
+            <div class="shots-stat">
+              <span>SHOTS</span
+              ><strong id="shots" aria-label="0 shots">○ ○ ○</strong>
+            </div>
             <div class="lives-stat">
               <span>LIVES</span
               ><strong id="lives" aria-label="3 lives">● ● ●</strong>
@@ -80,7 +84,7 @@
               width="768"
               height="768"
               tabindex="0"
-              aria-label="Monkey Crossing. Move with arrow keys or WASD. Avoid cars, ride logs, and reach the banana grove."
+              aria-label="Monkey Crossing. Move with arrow keys or WASD. Collect road coins and fire with B or Space. Avoid cars, ride logs, and reach the banana grove."
             ></canvas>
             <div id="overlay" class="overlay">
               <div class="overlay-card">
@@ -102,7 +106,7 @@
                   >NEW TOP MONKEY RUN! Enter 3 initials on the leaderboard.</a
                 >
                 <span id="overlay-hint" class="overlay-hint"
-                  >ARROW KEYS / WASD / TOUCH CONTROLS</span
+                  >ARROWS / WASD / B OR SPACE / SWIPE + DOUBLE-TAP</span
                 >
               </div>
             </div>
@@ -137,6 +141,14 @@
             ><button data-direction="down" aria-label="Move down">↓</button>
           </div>
           <button data-direction="right" aria-label="Move right">→</button>
+          <button
+            id="fire"
+            class="fire-control"
+            data-action="fire"
+            aria-label="Fire shot"
+          >
+            FIRE
+          </button>
         </div>
         <aside class="sidebar">
           <section class="mission">
@@ -166,8 +178,8 @@
               </svg>
             </div>
             <p>
-              Collect all three banana spots.<br />Empty spots refill next
-              level.
+              Collect all three banana spots.<br />Grab road coins to load a
+              shot.
             </p>
             <div class="harvest">
               <span id="harvest">0 / 3</span><span>BANANAS TO NEXT LEVEL</span>
@@ -196,6 +208,14 @@
                 Stay on a log, and don’t drift off-screen.
               </p>
             </div>
+            <div class="guide-row">
+              <span class="guide-number">04</span>
+              <p>
+                <strong>Coins load the shooter.</strong>Grab a gold coin in
+                traffic, then press B or Space — double-tap or FIRE on mobile —
+                to blast a car for 25 points.
+              </p>
+            </div>
           </section>
           <div class="settings">
             <button id="sound" class="setting" aria-pressed="false">
@@ -209,7 +229,9 @@
               ><span class="switch" aria-hidden="true"></span>
             </button>
           </div>
-          <p class="pause-tip">NEED A BREATHER? PRESS <kbd>P</kbd></p>
+          <p class="pause-tip">
+            <kbd>P</kbd> PAUSE · <kbd>SPACE</kbd>/<kbd>B</kbd> FIRE
+          </p>
         </aside>
       </div>
       <section

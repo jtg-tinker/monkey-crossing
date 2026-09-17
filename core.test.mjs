@@ -4,19 +4,33 @@ import {
   SIZE,
   CELL,
   LANE_CONFIG,
+  MAX_GRENADES,
   laneObjects,
   hazardAt,
   createState,
   movePlayer,
+  fireGrenade,
   step,
 } from "./core.mjs";
 
 const playing = () => ({ ...createState(), mode: "playing" });
 
+function emptyRoadX(lane, elapsed = 0, level = 1) {
+  const cars = laneObjects(lane, elapsed, level).sort((a, b) => a.x - b.x);
+  for (let i = 1; i < cars.length; i++) {
+    const mid = (cars[i - 1].x + cars[i - 1].width + cars[i].x) / 2;
+    if (mid > 40 && mid < SIZE - 40) return mid;
+  }
+}
+
 test("starts with three lives, a full timer, and a safe monkey", () => {
   const state = createState();
   assert.equal(state.lives, 3);
   assert.equal(state.remaining, 60);
+  assert.equal(state.coin, null);
+  assert.equal(state.launcher, 0);
+  assert.equal(state.grenade, null);
+  assert.deepEqual(state.wrecks, []);
   assert.equal(hazardAt(state.player, 0, 1), null);
   assert.equal(movePlayer(state, "up"), false);
 });
@@ -208,6 +222,108 @@ test("pausing freezes gameplay and ignores moves", () => {
   step(state, 10);
   assert.equal(movePlayer(state, "up"), false);
   assert.deepEqual(state, snapshot);
+});
+
+test("coins spawn on road lanes and expire uncollected", () => {
+  const state = playing();
+  state.coinTimer = 0.01;
+  const events = [];
+  step(state, 0.02, (event) => events.push(event));
+  assert.ok(state.coin);
+  assert.ok(
+    LANE_CONFIG.filter((lane) => lane.kind === "road")
+      .map((lane) => lane.row)
+      .includes(state.coin.row),
+  );
+  assert.ok(state.coin.x > 0 && state.coin.x < SIZE);
+  assert.deepEqual(events, ["coin-spawn"]);
+  state.player = { row: 0, x: 96 };
+  state.coin.ttl = 0.05;
+  step(state, 0.1);
+  assert.equal(state.coin, null);
+});
+
+test("grabbing a lane coin arms the grenade launcher", () => {
+  const state = playing();
+  const lane = LANE_CONFIG.find((item) => item.row === 8);
+  const x = emptyRoadX(lane);
+  state.coin = { row: 8, x, ttl: 5 };
+  state.player = { row: 8, x };
+  const events = [];
+  step(state, 0, (event) => events.push(event));
+  assert.equal(state.launcher, 1);
+  assert.equal(state.coin, null);
+  assert.deepEqual(events, ["coin"]);
+  state.launcher = MAX_GRENADES;
+  state.coin = { row: 8, x, ttl: 5 };
+  step(state, 0);
+  assert.equal(state.launcher, MAX_GRENADES);
+});
+
+test("the launcher needs a coin and fires one grenade at a time", () => {
+  const state = playing();
+  assert.equal(fireGrenade(state), false);
+  state.launcher = 1;
+  assert.equal(fireGrenade(state), true);
+  assert.equal(state.launcher, 0);
+  assert.ok(state.grenade);
+  state.launcher = 1;
+  assert.equal(fireGrenade(state), false);
+  assert.equal(state.launcher, 1);
+});
+
+test("a launched grenade travels upward through the lanes", () => {
+  const state = playing();
+  state.player = { row: 7, x: 96 };
+  state.launcher = 1;
+  fireGrenade(state);
+  const y = state.grenade.y;
+  step(state, 0.02);
+  assert.ok(state.grenade.y < y);
+});
+
+test("a grenade wrecks the first car it reaches and clears the hazard", () => {
+  const state = playing();
+  const lane = LANE_CONFIG.find((item) => item.row === 10);
+  const car = laneObjects(lane, 0).find(
+    (object) => object.x > 60 && object.x + object.width < SIZE - 60,
+  );
+  const x = car.x + car.width / 2;
+  state.player = { row: 11, x };
+  state.launcher = 1;
+  const events = [];
+  assert.equal(fireGrenade(state), true);
+  step(state, 0.05, (event) => events.push(event));
+  assert.equal(state.grenade, null);
+  assert.deepEqual(state.wrecks, [{ row: 10, id: car.id }]);
+  assert.equal(state.score, 25);
+  assert.deepEqual(events, ["blast"]);
+  assert.equal(
+    hazardAt({ row: 10, x }, state.elapsed, state.level, state.wrecks),
+    null,
+  );
+  state.player = { row: 10, x };
+  step(state, 0);
+  assert.equal(state.lives, 3);
+});
+
+test("a grenade that reaches the top fizzles harmlessly", () => {
+  const state = playing();
+  state.player = { row: 0, x: 256 };
+  state.launcher = 1;
+  const events = [];
+  fireGrenade(state);
+  step(state, 0.1, (event) => events.push(event));
+  assert.equal(state.grenade, null);
+  assert.equal(state.wrecks.length, 0);
+  assert.deepEqual(events, []);
+});
+
+test("wrecks are forgotten once the vehicle leaves the screen", () => {
+  const state = playing();
+  state.wrecks = [{ row: 10, id: -9999 }];
+  step(state, 0.01);
+  assert.equal(state.wrecks.length, 0);
 });
 
 test("lane objects cover the screen at high levels and long elapsed times", () => {

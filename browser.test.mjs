@@ -182,6 +182,91 @@ test("browser gameplay and responsive interface", async (t) => {
       },
     );
     await t.test(
+      "coins arm the launcher and keyboard firing updates the HUD",
+      async () => {
+        const page = await browser.newPage({
+          viewport: { width: 1440, height: 1000 },
+        });
+        const errors = [];
+        page.on("pageerror", (error) => errors.push(error.message));
+        await page.route(
+          (url) => url.pathname.endsWith("/core.mjs") && !url.search,
+          (route) =>
+            route.fulfill({
+              contentType: "text/javascript",
+              body: `
+          export * from "./core.mjs?shooter-test";
+          import {
+            LANE_CONFIG,
+            createState as originalCreateState,
+            laneObjects,
+          } from "./core.mjs?shooter-test";
+          globalThis.shooterTestTools = { LANE_CONFIG, laneObjects };
+          export function createState() {
+            const state = originalCreateState();
+            globalThis.shooterTestState = state;
+            return state;
+          }
+        `,
+            }),
+        );
+        await prepare(page);
+        await page.click("#start");
+        await page.keyboard.press(" ");
+        assert.match(
+          await page.textContent("#announcement"),
+          /GRAB A ROAD COIN/,
+        );
+        assert.equal(
+          await page.evaluate(() => Boolean(shooterTestState.grenade)),
+          false,
+        );
+        await page.evaluate(() => {
+          shooterTestState.coin = {
+            row: shooterTestState.player.row,
+            x: shooterTestState.player.x,
+            ttl: 10,
+          };
+        });
+        await advance(page, 1);
+        assert.equal(await page.textContent("#shots"), "● ○ ○");
+        assert.match(await page.textContent("#announcement"), /LAUNCHER ARMED/);
+        await page.evaluate(() => {
+          const lane = shooterTestTools.LANE_CONFIG.find(
+            (item) => item.row === 10,
+          );
+          const car = shooterTestTools
+            .laneObjects(lane, shooterTestState.elapsed, shooterTestState.level)
+            .find((item) => item.x > 60 && item.x + item.width < 768 - 60);
+          shooterTestState.player.x = car.x + car.width / 2;
+        });
+        await page.keyboard.press("b");
+        assert.equal(
+          await page.evaluate(() => Boolean(shooterTestState.grenade)),
+          true,
+        );
+        assert.equal(await page.textContent("#shots"), "○ ○ ○");
+        await advance(page, 1);
+        assert.ok(
+          await page.evaluate(() => shooterTestState.grenade.y < 718),
+          "fired grenade travels up the board",
+        );
+        await advance(page, 2);
+        assert.equal(await page.evaluate(() => shooterTestState.grenade), null);
+        assert.equal(
+          await page.evaluate(() => shooterTestState.wrecks.length),
+          1,
+        );
+        assert.equal(await page.textContent("#score"), "0025");
+        assert.match(
+          await page.textContent("#announcement"),
+          /DIRECT HIT! \+25/,
+        );
+        assert.deepEqual(errors, []);
+        await page.close();
+      },
+    );
+    await t.test(
       "desktop start, movement, pause, collisions, blood, game over and restart",
       async () => {
         const page = await browser.newPage({
@@ -330,6 +415,22 @@ test("browser gameplay and responsive interface", async (t) => {
         const page = await context.newPage();
         const errors = [];
         page.on("pageerror", (error) => errors.push(error.message));
+        await page.route(
+          (url) => url.pathname.endsWith("/core.mjs") && !url.search,
+          (route) =>
+            route.fulfill({
+              contentType: "text/javascript",
+              body: `
+          export * from "./core.mjs?mobile-test";
+          import { createState as originalCreateState } from "./core.mjs?mobile-test";
+          export function createState() {
+            const state = originalCreateState();
+            globalThis.mobileTestState = state;
+            return state;
+          }
+        `,
+            }),
+        );
         await prepare(page);
         await page.screenshot({
           path: "/tmp/monkey-crossing-mobile.png",
@@ -358,6 +459,20 @@ test("browser gameplay and responsive interface", async (t) => {
           touchPoints: [],
         });
         assert.equal(await page.textContent("#score"), "0020");
+        await page.evaluate(() => {
+          mobileTestState.launcher = 1;
+        });
+        await advance(page, 1);
+        assert.equal(
+          await page.getAttribute("#fire", "aria-label"),
+          "Fire shot, 1 remaining",
+        );
+        await page.tap("#fire");
+        assert.equal(
+          await page.evaluate(() => Boolean(mobileTestState.grenade)),
+          true,
+        );
+        assert.equal(await page.textContent("#shots"), "○ ○ ○");
         const interaction = await page.evaluate(async () => {
           const game = document.getElementById("game");
           const style = getComputedStyle(game);
@@ -394,6 +509,14 @@ test("browser gameplay and responsive interface", async (t) => {
             ),
             true,
             `no overflow at ${width}px`,
+          );
+          assert.equal(
+            await page.evaluate(() => {
+              const scoreboard = document.querySelector(".scoreboard");
+              return scoreboard.scrollWidth <= scoreboard.clientWidth;
+            }),
+            true,
+            `scoreboard fits at ${width}px`,
           );
           assert.equal(
             await page.evaluate(() => {

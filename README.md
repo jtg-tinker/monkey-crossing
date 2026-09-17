@@ -11,7 +11,8 @@ A Frogger-style browser arcade game built with HTML, CSS, and JavaScript Canvas.
 - Keyboard controls, mobile swipe gestures, on-screen movement buttons, and iOS/Android selection and long-press suppression on the game screen.
 - Three lives, a 60-second timer per attempt, and progressively faster traffic.
 - Collect the left, middle, and right banana spots to advance a level; each stays empty until all three are collected.
-- Points for forward progress and successful crossings, plus a remaining-time bonus.
+- Gold coins appear in traffic lanes and load up to three grenade shots. B/Space, double-tap, or FIRE disables a vehicle for +25 points; wrecked vehicles stop being deadly until they scroll off-screen.
+- Points for forward progress, successful crossings, and vehicle blasts, plus a remaining-time bonus.
 - Personal best scores and the blood-effects preference saved locally in your browser.
 - A public **Top Monkey Crossers** leaderboard with three-letter arcade initials, player platform, and 1st–10th records.
 - Optional synthesized sound effects, pause/resume, and reduced-motion support.
@@ -22,12 +23,16 @@ Blood effects are on by default; sound effects are off. Both can be changed besi
 
 Reach the banana grove at the top of the screen and move onto a banana spot to collect it. The banana disappears from that exact spot, which stays empty even if you lose a life. Empty spots and gaps do not award another banana; you can move along the grove to reach an uncollected one. Collect all three spots to advance to the next level and refill the grove.
 
+Gold coins appear briefly on road lanes. Collect one to load a shot, then press **B** or **Space** on desktop, or double-tap/tap **FIRE** on mobile, to launch a grenade. A hit disables that vehicle and awards 25 points.
+
 Avoid vehicles, stay on logs in the river, and don't drift off-screen. A collision, fall into the water, or expired timer costs one life. Lose all three lives and your run ends. If the score qualifies for the public top ten, enter three letters on **Top Monkey Crossers** to save your User, Score, Platform, and Record rank.
 
 | Action                | Control                                              |
 | --------------------- | ---------------------------------------------------- |
 | Move                  | Arrow keys or WASD                                   |
 | Move on mobile        | Swipe on the game board or tap the direction buttons |
+| Fire grenade          | B or Space after collecting a coin                   |
+| Fire on mobile        | Double-tap the game board or the FIRE button         |
 | Pause / resume        | P, Escape, or the pause button                       |
 | Start / restart       | The button in the game overlay                       |
 | Toggle sound or blood | Settings beside or below the game                    |
@@ -71,7 +76,7 @@ The browser tests use installed **Google Chrome on macOS**. On Linux, install Pl
 npx playwright install chromium
 ```
 
-Browser tests cover movement, collisions, blood effects, pause/resume, game over, restart, leaderboard submission, local storage, and mobile controls/layout. Test screenshots are written to `/tmp/monkey-crossing-*.png`.
+Browser tests cover movement, collisions, blood effects, coin-powered shooting, pause/resume, game over, restart, leaderboard submission, local storage, and mobile controls/layout. Test screenshots are written to `/tmp/monkey-crossing-*.png`.
 
 To test a different locally served copy, set `GAME_URL`:
 

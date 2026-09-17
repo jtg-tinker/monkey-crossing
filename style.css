@@ -223,7 +223,8 @@ h1 em {
 .scoreboard .lives-stat {
   margin-left: auto;
 }
-.lives-stat strong {
+.lives-stat strong,
+.shots-stat strong {
   color: var(--yellow);
   font-size: 17px;
   line-height: 28px;
@@ -707,6 +708,16 @@ kbd {
   background: var(--yellow);
   border-bottom-width: 1px;
 }
+.touch-controls .fire-control {
+  width: 78px;
+  background: var(--yellow);
+  border-color: #b98b2a;
+  font: 700 10px/1 var(--display);
+  letter-spacing: 1.2px;
+}
+.touch-controls .fire-control.empty {
+  opacity: 0.55;
+}
 .announcement {
   position: absolute;
   top: 20%;
@@ -970,12 +981,13 @@ html.dark .toast {
   }
   .scoreboard {
     height: 57px;
-    gap: 30px;
+    gap: 16px;
   }
   .scoreboard strong {
     font-size: 21px;
   }
-  .scoreboard .lives-stat strong {
+  .scoreboard .lives-stat strong,
+  .scoreboard .shots-stat strong {
     font-size: 15px;
   }
   .overlay-card h2 {

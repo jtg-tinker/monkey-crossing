@@ -2,6 +2,9 @@ export const SIZE = 768;
 export const CELL = 64;
 export const COLS = 12;
 export const ROUND_TIME = 60;
+export const COIN_TTL = 12;
+export const GRENADE_SPEED = 540;
+export const MAX_GRENADES = 3;
 export const BANANA_SPOTS = [160, 384, 608];
 export const LANE_CONFIG = [
   { row: 1, kind: "river", speed: 73, width: 178, gap: 94, offset: 24 },
@@ -20,15 +23,18 @@ export const modulo = (value, divisor) =>
 export function laneObjects(lane, elapsed, level = 1) {
   const spacing = lane.width + lane.gap;
   const speed = lane.speed * (1 + Math.min(level - 1, 12) * 0.1);
-  const origin = modulo(lane.offset + elapsed * speed, spacing) - spacing;
+  const traveled = lane.offset + elapsed * speed;
+  const cycle = Math.floor(traveled / spacing);
+  const origin = modulo(traveled, spacing) - spacing;
   return Array.from({ length: Math.ceil(SIZE / spacing) + 2 }, (_, i) => ({
     x: origin + i * spacing,
     width: lane.width,
     index: i,
+    id: i - cycle - 1,
   }));
 }
 
-export function hazardAt(player, elapsed, level) {
+export function hazardAt(player, elapsed, level, wrecks = []) {
   if (player.x < 14 || player.x > SIZE - 14) return "water";
   const lane = LANE_CONFIG.find((item) => item.row === player.row);
   if (!lane) return null;
@@ -41,7 +47,9 @@ export function hazardAt(player, elapsed, level) {
       : "water";
   return objects.some(
     (item) =>
-      player.x + 16 > item.x + 5 && player.x - 16 < item.x + item.width - 5,
+      !wrecks.some((wreck) => wreck.row === lane.row && wreck.id === item.id) &&
+      player.x + 16 > item.x + 5 &&
+      player.x - 16 < item.x + item.width - 5,
   )
     ? "car"
     : null;
@@ -62,6 +70,11 @@ export function createState() {
     cooldown: 0,
     respawn: 0,
     hop: 0,
+    coin: null,
+    coinTimer: 5,
+    launcher: 0,
+    grenade: null,
+    wrecks: [],
   };
 }
 
@@ -96,6 +109,19 @@ export function movePlayer(state, direction) {
   return true;
 }
 
+export function fireGrenade(state) {
+  if (
+    state.mode !== "playing" ||
+    state.respawn > 0 ||
+    state.launcher <= 0 ||
+    state.grenade
+  )
+    return false;
+  state.launcher--;
+  state.grenade = { x: state.player.x, y: state.player.row * CELL + 14 };
+  return true;
+}
+
 export function step(state, dt, onEvent = () => {}) {
   if (state.mode !== "playing") return;
   state.elapsed += dt;
@@ -115,9 +141,68 @@ export function step(state, dt, onEvent = () => {}) {
   if (lane?.kind === "river")
     state.player.x +=
       lane.speed * (1 + Math.min(state.level - 1, 12) * 0.1) * dt;
+  if (state.coin) {
+    state.coin.ttl -= dt;
+    if (state.coin.ttl <= 0) state.coin = null;
+    else if (
+      state.coin.row === state.player.row &&
+      Math.abs(state.coin.x - state.player.x) <= CELL / 2
+    ) {
+      state.coin = null;
+      state.launcher = Math.min(state.launcher + 1, MAX_GRENADES);
+      onEvent("coin");
+    }
+  } else {
+    state.coinTimer -= dt;
+    if (state.coinTimer <= 0) {
+      const rows = LANE_CONFIG.filter((item) => item.kind === "road").map(
+        (item) => item.row,
+      );
+      state.coin = {
+        row: rows[Math.floor(Math.random() * rows.length)],
+        x: CELL / 2 + CELL * Math.floor(Math.random() * COLS),
+        ttl: COIN_TTL,
+      };
+      state.coinTimer = 9 + Math.random() * 7;
+      onEvent("coin-spawn");
+    }
+  }
+  if (state.grenade) {
+    state.grenade.y -= GRENADE_SPEED * dt;
+    const row = Math.floor(state.grenade.y / CELL);
+    const road = LANE_CONFIG.find(
+      (item) => item.row === row && item.kind === "road",
+    );
+    const hit = road
+      ? laneObjects(road, state.elapsed, state.level).find(
+          (item) =>
+            !state.wrecks.some(
+              (wreck) => wreck.row === road.row && wreck.id === item.id,
+            ) &&
+            state.grenade.x + 6 > item.x &&
+            state.grenade.x - 6 < item.x + item.width,
+        )
+      : null;
+    if (hit) {
+      state.wrecks.push({ row: road.row, id: hit.id });
+      state.grenade = null;
+      state.score += 25;
+      onEvent("blast", {
+        x: hit.x + hit.width / 2,
+        y: road.row * CELL + CELL / 2,
+      });
+    } else if (state.grenade.y < -20) state.grenade = null;
+  }
+  state.wrecks = state.wrecks.filter((wreck) => {
+    const wreckLane = LANE_CONFIG.find((item) => item.row === wreck.row);
+    const spacing = wreckLane.width + wreckLane.gap;
+    const speed = wreckLane.speed * (1 + Math.min(state.level - 1, 12) * 0.1);
+    const x = wreckLane.offset + state.elapsed * speed + wreck.id * spacing;
+    return x + wreckLane.width > -spacing && x < SIZE + spacing;
+  });
   state.remaining = Math.max(0, state.remaining - dt);
   const hazard =
-    hazardAt(state.player, state.elapsed, state.level) ||
+    hazardAt(state.player, state.elapsed, state.level, state.wrecks) ||
     (state.remaining === 0 ? "time" : null);
   if (hazard) {
     state.lives--;

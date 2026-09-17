@@ -7,6 +7,8 @@ import {
   laneObjects,
   createState,
   movePlayer,
+  fireGrenade,
+  MAX_GRENADES,
   step,
 } from "./core.mjs";
 import {
@@ -81,13 +83,17 @@ function playTone(type) {
     car: [100, 32, 0.26],
     water: [220, 55, 0.23],
     goal: [570, 1140, 0.3],
+    coin: [700, 1180, 0.12],
+    "coin-spawn": [480, 680, 0.1],
+    launch: [210, 90, 0.16],
+    blast: [80, 28, 0.45],
     time: [170, 70, 0.3],
     start: [290, 580, 0.15],
   };
   const [from, to, duration] = notes[type] || notes.hop;
   const oscillator = audio.createOscillator();
   const gain = audio.createGain();
-  oscillator.type = type === "car" ? "sawtooth" : "square";
+  oscillator.type = type === "car" || type === "blast" ? "sawtooth" : "square";
   oscillator.frequency.setValueAtTime(from, audio.currentTime);
   oscillator.frequency.exponentialRampToValueAtTime(
     to,
@@ -218,7 +224,25 @@ function drawLog(x, y, width) {
   }
 }
 
-function drawCar(x, y, width, direction, color) {
+function drawCoin(x, y) {
+  const wobble = Math.abs(Math.sin(sceneryTime * 5));
+  ctx.globalAlpha = 0.5 + Math.sin(sceneryTime * 6) * 0.2;
+  ellipse(x, y - 1, 16, 16, "#f6cd5533");
+  ctx.globalAlpha = 1;
+  ellipse(x, y + 15, 11, 4, "#203a3138");
+  ellipse(x, y, 6 + wobble * 7, 12, "#9a6b1d");
+  ellipse(x, y - 1, 5 + wobble * 6, 10, "#ffd94e");
+  if (wobble > 0.55) rect(x - 2, y - 7, 4, 11, "#fff0b0");
+}
+
+function drawGrenade(x, y) {
+  rect(x - 1, y + 5, 3, 12, "#ff9b3d");
+  rect(x - 2, y + 5, 5, 7, "#ffd94e");
+  rect(x - 4, y - 4, 8, 9, "#33402f");
+  rect(x - 2, y - 7, 4, 4, "#8a9a7d");
+}
+
+function drawCar(x, y, width, direction, color, wrecked) {
   ctx.save();
   if (direction < 0) {
     ctx.translate(x + width, y);
@@ -249,6 +273,15 @@ function drawCar(x, y, width, direction, color) {
   rect(width - 7, 40, 5, 8, "#ffecac");
   rect(3, 18, 4, 7, "#ae4b3d");
   rect(3, 41, 4, 7, "#ae4b3d");
+  if (wrecked) {
+    rect(4, 14, width - 8, 37, "#262b2e");
+    rect(9, 19, width - 26, 25, "#161b1d");
+    rect(14, 14, width - 30, 4, "#3a4245");
+    const flicker = Math.sin(sceneryTime * 22 + x) > 0;
+    rect(width * 0.3, 8, 12, 9, flicker ? "#ff9b3d" : "#d0542c");
+    rect(width * 0.55, 10, 9, 7, flicker ? "#f6cd55" : "#ff9b3d");
+    rect(width * 0.44, 3, 6, 6, "#3d4448");
+  }
   ctx.restore();
 }
 
@@ -291,16 +324,19 @@ function drawMonkey(x, y) {
   ctx.restore();
 }
 
-function burst(type) {
-  const x = state.player.x;
-  const y = state.player.row * CELL + CELL / 2;
+function burst(type, origin) {
+  const x = origin?.x ?? state.player.x;
+  const y = origin?.y ?? state.player.row * CELL + CELL / 2;
   const bloody = type === "car" && blood;
-  const colors = bloody
-    ? ["#a62628", "#bc3433", "#811f28", "#d44a3c"]
-    : type === "water"
-      ? ["#a2d8cc", "#d4ede0", "#6dbbb6"]
-      : ["#f6cd55", "#f7ecb4", "#ffffff"];
-  const amount = reduceMotion ? 10 : bloody ? 45 : 24;
+  const colors =
+    type === "blast"
+      ? ["#ff9b3d", "#f6cd55", "#e2572b", "#fff3c4", "#4a4038"]
+      : bloody
+        ? ["#a62628", "#bc3433", "#811f28", "#d44a3c"]
+        : type === "water"
+          ? ["#a2d8cc", "#d4ede0", "#6dbbb6"]
+          : ["#f6cd55", "#f7ecb4", "#ffffff"];
+  const amount = reduceMotion ? 10 : type === "blast" ? 60 : bloody ? 45 : 24;
   for (let i = 0; i < amount; i++) {
     const angle = Math.random() * Math.PI * 2;
     const velocity = 35 + Math.random() * 190;
@@ -325,7 +361,8 @@ function burst(type) {
         color: colors[i % colors.length],
       });
   }
-  if (!reduceMotion && type === "car") shake = 0.24;
+  if (!reduceMotion && (type === "car" || type === "blast"))
+    shake = type === "blast" ? 0.3 : 0.24;
 }
 
 function announce(message) {
@@ -540,7 +577,7 @@ async function submitScore(event) {
   }
 }
 
-function handleEvent(type) {
+function handleEvent(type, data) {
   if (type === "over") {
     showOverlay(
       "END OF THE ROAD",
@@ -549,6 +586,24 @@ function handleEvent(type) {
       "Try again",
     );
     prepareScoreEntry();
+    return;
+  }
+  if (type === "coin-spawn") {
+    playTone("coin-spawn");
+    announce("GOLD COIN IN THE LANES!");
+    return;
+  }
+  if (type === "coin") {
+    playTone("coin");
+    announce("LAUNCHER ARMED — B / DOUBLE-TAP TO FIRE");
+    updateHUD();
+    return;
+  }
+  if (type === "blast") {
+    playTone("blast");
+    burst("blast", data);
+    announce("DIRECT HIT! +25");
+    updateHUD();
     return;
   }
   playTone(type);
@@ -584,6 +639,17 @@ function updateHUD() {
   ).join(" ");
   $("lives").setAttribute("aria-label", `${state.lives} lives`);
   $("harvest").textContent = `${state.harvest} / ${BANANA_SPOTS.length}`;
+  $("shots").textContent = Array.from({ length: MAX_GRENADES }, (_, i) =>
+    i < state.launcher ? "●" : "○",
+  ).join(" ");
+  $("shots").setAttribute("aria-label", `${state.launcher} shots`);
+  $("fire").classList.toggle("empty", state.launcher === 0);
+  $("fire").setAttribute(
+    "aria-label",
+    state.launcher
+      ? `Fire shot, ${state.launcher} remaining`
+      : "Fire shot unavailable, collect a road coin",
+  );
   const seconds = Math.ceil(state.remaining);
   $("time").textContent = `${seconds}s`;
   $("timer").setAttribute("aria-valuenow", seconds);
@@ -671,6 +737,20 @@ function move(direction) {
   }
 }
 
+function fire() {
+  unlockAudio();
+  if (fireGrenade(state)) {
+    playTone("launch");
+    updateHUD();
+  } else if (
+    state.mode === "playing" &&
+    state.respawn === 0 &&
+    !state.grenade &&
+    state.launcher === 0
+  )
+    announce("GRAB A ROAD COIN TO LOAD A SHOT");
+}
+
 function draw(dt) {
   ctx.save();
   if (shake > 0) {
@@ -700,11 +780,16 @@ function draw(dt) {
           object.width,
           lane.speed,
           palette[(lane.row + Math.floor(object.width)) % palette.length],
+          state.wrecks.some(
+            (wreck) => wreck.row === lane.row && wreck.id === object.id,
+          ),
         );
     }
   }
+  if (state.coin) drawCoin(state.coin.x, state.coin.row * CELL + CELL / 2);
   if (state.respawn === 0 && state.mode !== "over")
     drawMonkey(state.player.x, state.player.row * CELL + 32);
+  if (state.grenade) drawGrenade(state.grenade.x, state.grenade.y);
   for (const particle of particles) {
     ctx.globalAlpha = Math.min(1, particle.life * 2);
     rect(particle.x, particle.y, particle.size, particle.size, particle.color);
@@ -791,6 +876,13 @@ document.addEventListener("keydown", (event) => {
   if (keys[key] && state.mode === "playing") {
     event.preventDefault();
     move(keys[key]);
+  } else if (
+    (key === "b" || key === " ") &&
+    state.mode === "playing" &&
+    !event.repeat
+  ) {
+    event.preventDefault();
+    fire();
   } else if ((key === "p" || key === "Escape") && !event.repeat) pauseGame();
   else if (
     key === "Enter" &&
@@ -804,6 +896,7 @@ document.addEventListener("keydown", (event) => {
 });
 for (const button of document.querySelectorAll("[data-direction]"))
   button.addEventListener("click", () => move(button.dataset.direction));
+$("fire").addEventListener("click", fire);
 let swipe;
 for (const eventName of ["contextmenu", "selectstart", "dragstart"])
   canvas.addEventListener(eventName, (event) => event.preventDefault());
@@ -811,11 +904,12 @@ canvas.addEventListener("pointerdown", (event) => {
   swipe = { x: event.clientX, y: event.clientY };
   canvas.setPointerCapture(event.pointerId);
 });
+let lastTap = 0;
 canvas.addEventListener("pointerup", (event) => {
   if (!swipe) return;
   const dx = event.clientX - swipe.x;
   const dy = event.clientY - swipe.y;
-  if (Math.max(Math.abs(dx), Math.abs(dy)) > 12)
+  if (Math.max(Math.abs(dx), Math.abs(dy)) > 12) {
     move(
       Math.abs(dx) > Math.abs(dy)
         ? dx > 0
@@ -825,6 +919,14 @@ canvas.addEventListener("pointerup", (event) => {
           ? "down"
           : "up",
     );
+    lastTap = 0;
+  } else {
+    const now = performance.now();
+    if (now - lastTap < 320) {
+      lastTap = 0;
+      fire();
+    } else lastTap = now;
+  }
   swipe = null;
 });
 canvas.addEventListener("pointercancel", () => {
