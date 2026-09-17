@@ -746,6 +746,84 @@ kbd {
 .toast.visible {
   opacity: 1;
 }
+html.dark {
+  --muted: #85927f;
+  --line: #25382e;
+  color-scheme: dark;
+}
+html.dark body {
+  background: #0d1713;
+  color: #e8eddc;
+}
+html.dark .brand,
+html.dark .setting,
+html.dark .guide-row strong,
+html.dark .record > span:first-child {
+  color: #e8eddc;
+}
+html.dark .brand-mark {
+  border: 1px solid #2b4536;
+}
+html.dark .subtitle {
+  color: #93a18c;
+}
+html.dark .outline,
+html.dark .guide-number,
+html.dark kbd {
+  border-color: #35503f;
+}
+html.dark .outline {
+  color: #e8eddc;
+}
+html.dark .mission {
+  background: #15251d;
+  border-color: #294135;
+}
+html.dark .mission h2 span {
+  color: #e5a531;
+}
+html.dark .mission > p:not(.eyebrow),
+html.dark .guide-row p {
+  color: #8b9d86;
+}
+html.dark .harvest {
+  border-color: #294135;
+}
+html.dark .harvest > span:last-child,
+html.dark .setting small {
+  color: #74846f;
+}
+html.dark .switch {
+  background: #2c4234;
+}
+html.dark .setting[aria-pressed="true"] .switch {
+  background: var(--yellow);
+}
+html.dark .setting[aria-pressed="true"] .switch:after {
+  background: #183f35;
+}
+html.dark .touch-controls button {
+  background: #1a2c22;
+  border-color: #35503f;
+  color: #e8eddc;
+}
+html.dark .touch-controls button:active {
+  background: var(--yellow);
+  color: #183f35;
+}
+html.dark .arcade,
+html.dark .leaderboard {
+  box-shadow:
+    0 8px 0 #060d0a,
+    0 14px 32px #00000030;
+}
+html.dark .page-footer {
+  color: #67765f;
+}
+html.dark .toast {
+  background: #e8eddc;
+  color: #10211a;
+}
 @media (min-width: 1400px) {
   main {
     max-width: 1180px;
@@ -966,7 +1044,8 @@ kbd {
   .settings {
     grid-column: 1/-1;
     display: flex;
-    gap: 25px;
+    flex-wrap: wrap;
+    gap: 12px 25px;
     margin-top: -10px;
   }
   .pause-tip {

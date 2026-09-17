@@ -242,6 +242,20 @@ test("browser gameplay and responsive interface", async (t) => {
         );
         await page.click("#sound");
         assert.equal(await page.getAttribute("#sound", "aria-pressed"), "true");
+        const darkBefore = await page.evaluate(() =>
+          document.documentElement.classList.contains("dark"),
+        );
+        await page.click("#dark");
+        assert.equal(
+          await page.getAttribute("#dark", "aria-pressed"),
+          String(!darkBefore),
+        );
+        assert.equal(
+          await page.evaluate(() =>
+            document.documentElement.classList.contains("dark"),
+          ),
+          !darkBefore,
+        );
         for (let i = 0; i < 80; i++) {
           if (await page.isVisible("#overlay")) break;
           await advance(page, 10);
@@ -268,6 +282,13 @@ test("browser gameplay and responsive interface", async (t) => {
         assert.equal(
           await page.getAttribute("#blood", "aria-pressed"),
           "false",
+        );
+        assert.equal(
+          await page.evaluate(() =>
+            document.documentElement.classList.contains("dark"),
+          ),
+          !darkBefore,
+          "dark mode choice persists across reload",
         );
         assert.equal(await page.locator("#share").count(), 0);
         assert.equal(

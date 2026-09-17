@@ -28,9 +28,12 @@ let state = createState();
 let best = 0;
 let blood = true;
 let sound = false;
+let dark = matchMedia("(prefers-color-scheme: dark)").matches;
 try {
   best = Number(localStorage.getItem("monkey-crossing-best")) || 0;
   blood = localStorage.getItem("monkey-crossing-blood") !== "false";
+  const storedDark = localStorage.getItem("monkey-crossing-dark");
+  if (storedDark !== null) dark = storedDark === "true";
 } catch {}
 let audio;
 let particles = [];
@@ -603,6 +606,14 @@ function updateHUD() {
   );
   $("blood").setAttribute("aria-pressed", blood);
   $("sound").setAttribute("aria-pressed", sound);
+  $("dark").setAttribute("aria-pressed", dark);
+}
+
+function applyTheme() {
+  document.documentElement.classList.toggle("dark", dark);
+  document
+    .querySelector('meta[name="theme-color"]')
+    .setAttribute("content", dark ? "#0d1713" : "#183f35");
 }
 
 function showOverlay(label, title, description, button) {
@@ -748,6 +759,22 @@ $("blood").addEventListener("click", () => {
   }
   updateHUD();
 });
+$("dark").addEventListener("click", () => {
+  dark = !dark;
+  save("monkey-crossing-dark", dark);
+  applyTheme();
+  updateHUD();
+});
+matchMedia("(prefers-color-scheme: dark)").addEventListener(
+  "change",
+  (event) => {
+    try {
+      if (localStorage.getItem("monkey-crossing-dark") !== null) return;
+    } catch {}
+    dark = event.matches;
+    applyTheme();
+  },
+);
 const keys = {
   ArrowUp: "up",
   ArrowDown: "down",
@@ -821,6 +848,7 @@ $("initials").addEventListener("input", (event) => {
   event.target.value = normalizeInitials(event.target.value);
 });
 $("score-form").addEventListener("submit", submitScore);
+applyTheme();
 updateHUD();
 refreshLeaderboard();
 requestAnimationFrame(frame);
