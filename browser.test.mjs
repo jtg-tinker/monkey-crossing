@@ -230,6 +230,13 @@ test("browser gameplay and responsive interface", async (t) => {
           2,
           "two coins are visible after each spawn",
         );
+        assert.equal(
+          await page.evaluate(
+            () => new Set(shooterTestState.coins.map((coin) => coin.row)).size,
+          ),
+          2,
+          "the two coins use different road lanes",
+        );
         await page.evaluate(() => {
           shooterTestState.coins[0].row = shooterTestState.player.row;
           shooterTestState.coins[0].x = shooterTestState.player.x;

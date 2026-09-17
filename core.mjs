@@ -156,17 +156,18 @@ export function step(state, dt, onEvent = () => {}) {
   if (!state.coins.length) {
     state.coinTimer -= dt;
     if (state.coinTimer <= 0) {
-      const spots = LANE_CONFIG.filter((item) => item.kind === "road").flatMap(
-        (lane) =>
-          Array.from({ length: COLS }, (_, column) => ({
-            row: lane.row,
-            x: CELL / 2 + CELL * column,
-          })),
-      );
-      state.coins = Array.from({ length: COIN_COUNT }, () => ({
-        ...spots.splice(Math.floor(Math.random() * spots.length), 1)[0],
-        ttl: COIN_TTL,
-      }));
+      const lanes = LANE_CONFIG.filter((item) => item.kind === "road");
+      state.coins = Array.from({ length: COIN_COUNT }, () => {
+        const lane = lanes.splice(
+          Math.floor(Math.random() * lanes.length),
+          1,
+        )[0];
+        return {
+          row: lane.row,
+          x: CELL / 2 + CELL * Math.floor(Math.random() * COLS),
+          ttl: COIN_TTL,
+        };
+      });
       state.coinTimer = 9 + Math.random() * 7;
       onEvent("coin-spawn");
     }

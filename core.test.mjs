@@ -240,8 +240,9 @@ test("two coins spawn on road lanes and expire uncollected", () => {
     assert.ok(coin.x > 0 && coin.x < SIZE);
   }
   assert.equal(
-    new Set(state.coins.map((coin) => `${coin.row}:${coin.x}`)).size,
+    new Set(state.coins.map((coin) => coin.row)).size,
     COIN_COUNT,
+    "each coin gets its own road lane",
   );
   assert.deepEqual(events, ["coin-spawn"]);
   state.player = { row: 0, x: 96 };
