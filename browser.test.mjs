@@ -145,11 +145,31 @@ test("browser gameplay and responsive interface", async (t) => {
       },
     );
     await t.test(
-      "vivid level palette keeps the page styling unchanged",
+      "jungle biome palette and animal hazards keep the page styling unchanged",
       async () => {
         const page = await browser.newPage({
           viewport: { width: 1440, height: 1000 },
         });
+        await page.route(
+          (url) => url.pathname.endsWith("/core.mjs") && !url.search,
+          (route) =>
+            route.fulfill({
+              contentType: "text/javascript",
+              body: `
+          export * from "./core.mjs?theme-test";
+          import {
+            createState as originalCreateState,
+            snakesForLevel,
+          } from "./core.mjs?theme-test";
+          globalThis.themeTestTools = { snakesForLevel };
+          export function createState() {
+            const state = originalCreateState();
+            globalThis.themeTestState = state;
+            return state;
+          }
+        `,
+            }),
+        );
         await prepare(page);
         await page.click("#start");
         await advance(page, 1);
@@ -158,21 +178,40 @@ test("browser gameplay and responsive interface", async (t) => {
           const pixel = (x, y) =>
             Array.from(context.getImageData(x, y, 1, 1).data).slice(0, 3);
           return {
-            road: pixel(50, 310),
-            blue: pixel(30, 344),
-            orange: pixel(174, 288),
-            yellow: pixel(310, 608),
+            jungle: pixel(50, 310),
+            lion: pixel(174, 288),
+            snake: pixel(85, 345),
+            tiger: pixel(174, 415),
+            bear: pixel(310, 608),
+            ambushSnake: pixel(352, 235),
             page: getComputedStyle(document.body).backgroundColor,
             heading: getComputedStyle(document.querySelector("h1 em")).color,
           };
         });
         assert.deepEqual(colors, {
-          road: [32, 40, 46],
-          blue: [23, 111, 193],
-          orange: [240, 107, 36],
-          yellow: [255, 197, 46],
+          jungle: [36, 68, 47],
+          lion: [201, 134, 53],
+          snake: [109, 180, 87],
+          tiger: [228, 123, 45],
+          bear: [107, 67, 41],
+          ambushSnake: [63, 138, 69],
           page: "rgb(245, 242, 233)",
           heading: "rgb(215, 105, 54)",
+        });
+        await page.evaluate(() => {
+          themeTestState.level = 2;
+          themeTestState.snakes = themeTestTools.snakesForLevel(2);
+        });
+        await advance(page, 1);
+        const savanna = await page.evaluate(() => {
+          const context = document.getElementById("game").getContext("2d");
+          const pixel = (x, y) =>
+            Array.from(context.getImageData(x, y, 1, 1).data).slice(0, 3);
+          return { ground: pixel(50, 310), safe: pixel(50, 220) };
+        });
+        assert.deepEqual(savanna, {
+          ground: [180, 131, 53],
+          safe: [208, 168, 75],
         });
         await page.screenshot({
           path: "/tmp/monkey-crossing-level.png",
@@ -215,7 +254,7 @@ test("browser gameplay and responsive interface", async (t) => {
         await page.keyboard.press(" ");
         assert.match(
           await page.textContent("#announcement"),
-          /GRAB A ROAD COIN/,
+          /GRAB A JUNGLE COIN/,
         );
         assert.equal(
           await page.evaluate(() => Boolean(shooterTestState.grenade)),
@@ -235,7 +274,7 @@ test("browser gameplay and responsive interface", async (t) => {
             () => new Set(shooterTestState.coins.map((coin) => coin.row)).size,
           ),
           2,
-          "the two coins use different road lanes",
+          "the two coins use different hazard lanes",
         );
         await page.evaluate(() => {
           shooterTestState.coins[0].row = shooterTestState.player.row;
@@ -288,7 +327,10 @@ test("browser gameplay and responsive interface", async (t) => {
         const errors = [];
         page.on("pageerror", (error) => errors.push(error.message));
         await prepare(page);
-        assert.equal(await page.title(), "Monkey Crossing — A jungle commute");
+        assert.equal(
+          await page.title(),
+          "Monkey Crossing — Jungle survival arcade",
+        );
         await page.screenshot({
           path: "/tmp/monkey-crossing-desktop.png",
           fullPage: true,
@@ -318,11 +360,11 @@ test("browser gameplay and responsive interface", async (t) => {
           }
           await advance(page);
         }
-        assert.ok(collided, "crossing traffic should produce a collision");
+        assert.ok(collided, "crossing hazards should produce a collision");
         await advance(page, 3);
         assert.ok(
           (await redPixels(page)) > before + 50,
-          "car impact renders red blood particles",
+          "animal impact renders red blood particles",
         );
         await page.screenshot({
           path: "/tmp/monkey-crossing-impact.png",
@@ -362,7 +404,7 @@ test("browser gameplay and responsive interface", async (t) => {
         await advance(page, 70);
         assert.equal(
           await page.textContent("#overlay-label"),
-          "END OF THE ROAD",
+          "END OF THE EXPEDITION",
         );
         assert.equal(
           await page.getAttribute("#lives", "aria-label"),

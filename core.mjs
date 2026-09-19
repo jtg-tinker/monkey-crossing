@@ -17,13 +17,91 @@ export const LANE_CONFIG = [
   { row: 9, kind: "road", speed: -88, width: 128, gap: 194, offset: 190 },
   { row: 10, kind: "road", speed: 115, width: 80, gap: 189, offset: 10 },
 ];
+export const BIOMES = [
+  {
+    name: "JUNGLE",
+    hazards: {
+      4: "lion",
+      5: "snake",
+      6: "tiger",
+      8: "snake",
+      9: "bear",
+      10: "lion",
+    },
+  },
+  {
+    name: "SAVANNA",
+    hazards: {
+      4: "lion",
+      5: "hyena",
+      6: "lion",
+      8: "hyena",
+      9: "lion",
+      10: "hyena",
+    },
+  },
+  {
+    name: "ARCTIC",
+    hazards: {
+      4: "polar-bear",
+      5: "wolf",
+      6: "polar-bear",
+      8: "wolf",
+      9: "polar-bear",
+      10: "wolf",
+    },
+  },
+  {
+    name: "VOLCANO",
+    hazards: {
+      4: "dinosaur",
+      5: "lava",
+      6: "dinosaur",
+      8: "lava",
+      9: "dinosaur",
+      10: "lava",
+    },
+  },
+  {
+    name: "ZOO ESCAPE",
+    hazards: {
+      4: "tiger",
+      5: "gorilla",
+      6: "security",
+      8: "tiger",
+      9: "gorilla",
+      10: "security",
+    },
+  },
+];
 
 export const modulo = (value, divisor) =>
   ((value % divisor) + divisor) % divisor;
 
+export function biomeForLevel(level) {
+  return BIOMES[modulo(level - 1, BIOMES.length)];
+}
+
+export function hazardType(lane, level = 1) {
+  if (lane.kind !== "road") return null;
+  return biomeForLevel(level).hazards[lane.row];
+}
+
+export function laneSpeed(lane, level = 1) {
+  const speed = hazardType(lane, level) === "snake" ? 0 : lane.speed;
+  return speed * (1 + Math.min(level - 1, 12) * 0.1);
+}
+
+export function snakesForLevel(level = 1) {
+  return [
+    { row: 3, x: CELL * (2 + modulo(level * 3, 9)) + CELL / 2 },
+    { row: 7, x: CELL * (9 - modulo(level * 2, 9)) + CELL / 2 },
+  ];
+}
+
 export function laneObjects(lane, elapsed, level = 1) {
   const spacing = lane.width + lane.gap;
-  const speed = lane.speed * (1 + Math.min(level - 1, 12) * 0.1);
+  const speed = laneSpeed(lane, level);
   const traveled = lane.offset + elapsed * speed;
   const cycle = Math.floor(traveled / spacing);
   const origin = modulo(traveled, spacing) - spacing;
@@ -35,8 +113,14 @@ export function laneObjects(lane, elapsed, level = 1) {
   }));
 }
 
-export function hazardAt(player, elapsed, level, wrecks = []) {
+export function hazardAt(player, elapsed, level, wrecks = [], snakes = []) {
   if (player.x < 14 || player.x > SIZE - 14) return "water";
+  if (
+    snakes.some(
+      (snake) => snake.row === player.row && Math.abs(snake.x - player.x) <= 24,
+    )
+  )
+    return "snake";
   const lane = LANE_CONFIG.find((item) => item.row === player.row);
   if (!lane) return null;
   const objects = laneObjects(lane, elapsed, level);
@@ -76,6 +160,7 @@ export function createState() {
     launcher: 0,
     grenade: null,
     wrecks: [],
+    snakes: snakesForLevel(1),
   };
 }
 
@@ -140,8 +225,7 @@ export function step(state, dt, onEvent = () => {}) {
   }
   const lane = LANE_CONFIG.find((item) => item.row === state.player.row);
   if (lane?.kind === "river")
-    state.player.x +=
-      lane.speed * (1 + Math.min(state.level - 1, 12) * 0.1) * dt;
+    state.player.x += laneSpeed(lane, state.level) * dt;
   state.coins = state.coins.filter((coin) => (coin.ttl -= dt) > 0);
   const collected = state.coins.find(
     (coin) =>
@@ -175,6 +259,9 @@ export function step(state, dt, onEvent = () => {}) {
   if (state.grenade) {
     state.grenade.y -= GRENADE_SPEED * dt;
     const row = Math.floor(state.grenade.y / CELL);
+    const snake = state.snakes.find(
+      (item) => item.row === row && Math.abs(item.x - state.grenade.x) <= 22,
+    );
     const road = LANE_CONFIG.find(
       (item) => item.row === row && item.kind === "road",
     );
@@ -188,8 +275,17 @@ export function step(state, dt, onEvent = () => {}) {
             state.grenade.x - 6 < item.x + item.width,
         )
       : null;
-    if (hit) {
-      state.wrecks.push({ row: road.row, id: hit.id });
+    if (snake) {
+      state.snakes = state.snakes.filter((item) => item !== snake);
+      state.grenade = null;
+      state.score += 25;
+      onEvent("blast", { x: snake.x, y: snake.row * CELL + CELL / 2 });
+    } else if (hit) {
+      state.wrecks.push({
+        row: road.row,
+        id: hit.id,
+        ...(laneSpeed(road, state.level) === 0 ? { ttl: 6 } : {}),
+      });
       state.grenade = null;
       state.score += 25;
       onEvent("blast", {
@@ -199,16 +295,25 @@ export function step(state, dt, onEvent = () => {}) {
     } else if (state.grenade.y < -20) state.grenade = null;
   }
   state.wrecks = state.wrecks.filter((wreck) => {
+    if (wreck.ttl !== undefined) {
+      wreck.ttl -= dt;
+      return wreck.ttl > 0;
+    }
     const wreckLane = LANE_CONFIG.find((item) => item.row === wreck.row);
     const spacing = wreckLane.width + wreckLane.gap;
-    const speed = wreckLane.speed * (1 + Math.min(state.level - 1, 12) * 0.1);
+    const speed = laneSpeed(wreckLane, state.level);
     const x = wreckLane.offset + state.elapsed * speed + wreck.id * spacing;
     return x + wreckLane.width > -spacing && x < SIZE + spacing;
   });
   state.remaining = Math.max(0, state.remaining - dt);
   const hazard =
-    hazardAt(state.player, state.elapsed, state.level, state.wrecks) ||
-    (state.remaining === 0 ? "time" : null);
+    hazardAt(
+      state.player,
+      state.elapsed,
+      state.level,
+      state.wrecks,
+      state.snakes,
+    ) || (state.remaining === 0 ? "time" : null);
   if (hazard) {
     state.lives--;
     state.respawn = 1.05;
@@ -225,6 +330,7 @@ export function step(state, dt, onEvent = () => {}) {
       state.level++;
       state.harvest = 0;
       state.collectedBananas.fill(false);
+      state.snakes = snakesForLevel(state.level);
     }
     resetPlayer(state);
     state.cooldown = 0.3;

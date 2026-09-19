@@ -1,18 +1,21 @@
 # Monkey Crossing
 
-**Small monkey. Big commute. Traffic is bananas.**
+**Small monkey. Wild world. The jungle is bananas.**
 
-A Frogger-style browser arcade game built with HTML, CSS, and JavaScript Canvas. Guide a monkey through traffic, ride floating logs across the river, and reach the banana grove.
+A Frogger-style jungle survival arcade game built with HTML, CSS, and JavaScript Canvas. Guide a monkey through rotating biomes, dodge predators and ambush snakes, ride floating logs across the river, and reach the banana grove.
 
 ## Features
 
-- Pixel-art monkey, cars, trucks, and jungle scenery drawn directly on Canvas.
-- Cartoon blood splatter on car impacts, with a toggle to turn it off.
+- Pixel-art monkey, predators, snakes, and jungle scenery drawn directly on Canvas.
+- Five rotating biomes: **Jungle**, **Savanna**, **Arctic**, **Volcano**, and **Zoo Escape**.
+- Lions, tigers, bears, hyenas, wolves, polar bears, dinosaurs, lava hazards, gorillas, and zoo security vehicles.
+- Stationary ambush snakes appear on safe jungle paths; grenades can clear them for bonus points.
+- Cartoon blood splatter on animal attacks, with a toggle to turn it off.
 - Keyboard controls, mobile swipe gestures, on-screen movement buttons, and iOS/Android selection and long-press suppression on the game screen.
-- Three lives, a 60-second timer per attempt, and progressively faster traffic.
+- Three lives, a 60-second timer per attempt, and progressively faster hazards.
 - Collect the left, middle, and right banana spots to advance a level; each stays empty until all three are collected.
-- Pairs of gold coins appear on different traffic lanes and load up to three grenade shots. B/Space, double-tap, or FIRE disables a vehicle for +25 points; wrecked vehicles stop being deadly until they scroll off-screen.
-- Points for forward progress, successful crossings, and vehicle blasts, plus a remaining-time bonus.
+- Pairs of gold coins appear on different hazard lanes and load up to three grenade shots. B/Space, double-tap, or FIRE disables a hazard for +25 points; wrecked hazards stop being deadly until they leave or recover.
+- Points for forward progress, successful crossings, and hazard blasts, plus a remaining-time bonus.
 - Personal best scores and the blood-effects preference saved locally in your browser.
 - A public **Top Monkey Crossers** leaderboard with three-letter arcade initials, player platform, and 1st–10th records.
 - Optional synthesized sound effects, pause/resume, and reduced-motion support.
@@ -23,9 +26,11 @@ Blood effects are on by default; sound effects are off. Both can be changed besi
 
 Reach the banana grove at the top of the screen and move onto a banana spot to collect it. The banana disappears from that exact spot, which stays empty even if you lose a life. Empty spots and gaps do not award another banana; you can move along the grove to reach an uncollected one. Collect all three spots to advance to the next level and refill the grove.
 
-Two gold coins appear briefly on different road lanes. Collect one to load a shot, then press **B** or **Space** on desktop, or double-tap/tap **FIRE** on mobile, to launch a grenade. A hit disables that vehicle and awards 25 points.
+Two gold coins appear briefly on different hazard lanes. Collect one to load a shot, then press **B** or **Space** on desktop, or double-tap/tap **FIRE** on mobile, to launch a grenade. A hit disables that hazard or clears a snake and awards 25 points.
 
-Avoid vehicles, stay on logs in the river, and don't drift off-screen. A collision, fall into the water, or expired timer costs one life. Lose all three lives and your run ends. If the score qualifies for the public top ten, enter three letters on **Top Monkey Crossers** to save your User, Score, Platform, and Record rank.
+Each level changes the survival zone: jungle predators and snakes, savanna lions and hyenas, arctic wolves and polar bears, volcano dinosaurs and lava, then zoo tigers, gorillas, and security vehicles. The cycle repeats with faster hazards.
+
+Avoid animals and snakes, stay on logs in the river, and don't drift off-screen. An attack, fall into the water, or expired timer costs one life. Lose all three lives and your run ends. If the score qualifies for the public top ten, enter three letters on **Top Monkey Crossers** to save your User, Score, Platform, and Record rank.
 
 | Action                | Control                                              |
 | --------------------- | ---------------------------------------------------- |
@@ -76,7 +81,7 @@ The browser tests use installed **Google Chrome on macOS**. On Linux, install Pl
 npx playwright install chromium
 ```
 
-Browser tests cover movement, collisions, blood effects, coin-powered shooting, pause/resume, game over, restart, leaderboard submission, local storage, and mobile controls/layout. Test screenshots are written to `/tmp/monkey-crossing-*.png`.
+Browser tests cover movement, biome visuals, animal and snake hazards, blood effects, coin-powered shooting, pause/resume, game over, restart, leaderboard submission, local storage, and mobile controls/layout. Test screenshots are written to `/tmp/monkey-crossing-*.png`.
 
 To test a different locally served copy, set `GAME_URL`:
 

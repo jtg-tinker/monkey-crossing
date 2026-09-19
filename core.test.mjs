@@ -6,7 +6,12 @@ import {
   LANE_CONFIG,
   COIN_COUNT,
   MAX_GRENADES,
+  BIOMES,
   laneObjects,
+  biomeForLevel,
+  hazardType,
+  laneSpeed,
+  snakesForLevel,
   hazardAt,
   createState,
   movePlayer,
@@ -32,6 +37,7 @@ test("starts with three lives, a full timer, and a safe monkey", () => {
   assert.equal(state.launcher, 0);
   assert.equal(state.grenade, null);
   assert.deepEqual(state.wrecks, []);
+  assert.deepEqual(state.snakes, snakesForLevel(1));
   assert.equal(hazardAt(state.player, 0, 1), null);
   assert.equal(movePlayer(state, "up"), false);
 });
@@ -54,7 +60,7 @@ test("movement is bounded, rate limited, and only rewards new forward progress",
   assert.equal(movePlayer(state, "right"), false);
 });
 
-test("traffic collision costs exactly one life and respawns safely", () => {
+test("hazard collision costs exactly one life and respawns safely", () => {
   const state = playing();
   const lane = LANE_CONFIG.find((lane) => lane.kind === "road");
   const car = laneObjects(lane, 0).find(
@@ -225,7 +231,49 @@ test("pausing freezes gameplay and ignores moves", () => {
   assert.deepEqual(state, snapshot);
 });
 
-test("two coins spawn on road lanes and expire uncollected", () => {
+test("levels rotate through themed biomes and animal hazards", () => {
+  assert.deepEqual(
+    BIOMES.map((biome) => biome.name),
+    ["JUNGLE", "SAVANNA", "ARCTIC", "VOLCANO", "ZOO ESCAPE"],
+  );
+  assert.equal(biomeForLevel(1).name, "JUNGLE");
+  assert.equal(biomeForLevel(6).name, "JUNGLE");
+  const snakeLane = LANE_CONFIG.find((item) => item.row === 8);
+  assert.equal(hazardType(snakeLane, 1), "snake");
+  assert.equal(laneSpeed(snakeLane, 1), 0);
+  assert.notEqual(laneSpeed(snakeLane, 2), 0);
+});
+
+test("stationary snakes ambush the monkey", () => {
+  const state = playing();
+  const snake = state.snakes[0];
+  state.player = { row: snake.row, x: snake.x };
+  const events = [];
+  step(state, 0, (event) => events.push(event));
+  assert.equal(state.lives, 2);
+  assert.deepEqual(events, ["snake"]);
+});
+
+test("a grenade clears an ambush snake for bonus points", () => {
+  const state = playing();
+  const snake = state.snakes[1];
+  state.grenade = {
+    x: snake.x,
+    y: snake.row * CELL + CELL / 2 + 10,
+  };
+  const events = [];
+  step(state, 1 / 120, (event) => events.push(event));
+  assert.equal(state.grenade, null);
+  assert.equal(state.snakes.length, 1);
+  assert.equal(state.score, 25);
+  assert.deepEqual(events, ["blast"]);
+});
+
+test("snake positions rotate as levels change", () => {
+  assert.notDeepEqual(snakesForLevel(1), snakesForLevel(2));
+});
+
+test("two coins spawn on hazard lanes and expire uncollected", () => {
   const state = playing();
   state.coinTimer = 0.01;
   const events = [];
@@ -242,7 +290,7 @@ test("two coins spawn on road lanes and expire uncollected", () => {
   assert.equal(
     new Set(state.coins.map((coin) => coin.row)).size,
     COIN_COUNT,
-    "each coin gets its own road lane",
+    "each coin gets its own hazard lane",
   );
   assert.deepEqual(events, ["coin-spawn"]);
   state.player = { row: 0, x: 96 };
@@ -290,7 +338,7 @@ test("a launched grenade travels upward through the lanes", () => {
   assert.ok(state.grenade.y < y);
 });
 
-test("a grenade wrecks the first car it reaches and clears the hazard", () => {
+test("a grenade wrecks the first hazard it reaches and clears it", () => {
   const state = playing();
   const lane = LANE_CONFIG.find((item) => item.row === 10);
   const car = laneObjects(lane, 0).find(
@@ -327,7 +375,7 @@ test("a grenade that reaches the top fizzles harmlessly", () => {
   assert.deepEqual(events, []);
 });
 
-test("wrecks are forgotten once the vehicle leaves the screen", () => {
+test("wrecks are forgotten once the hazard leaves or recovers", () => {
   const state = playing();
   state.wrecks = [{ row: 10, id: -9999 }];
   step(state, 0.01);

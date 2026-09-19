@@ -5,6 +5,8 @@ import {
   ROUND_TIME,
   BANANA_SPOTS,
   laneObjects,
+  biomeForLevel,
+  hazardType,
   createState,
   movePlayer,
   fireGrenade,
@@ -52,7 +54,106 @@ let leaderboardRequest;
 let pendingScore;
 let submittedEntryId;
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
-const palette = ["#f06b24", "#ffc52e", "#176fc1", "#f7e9bb"];
+const BIOME_STYLES = {
+  JUNGLE: {
+    safe: "#75a53c",
+    canopy: "#397e38",
+    safeEdge: "#477532",
+    grass: "#a3ca58",
+    water: "#168f9b",
+    waterEdge: "#106e7b",
+    wave: "#60c8c4",
+    waveDark: "#39b2b4",
+    spot: "#3c6541",
+    spotEdge: "#9caf64",
+    ground: "#24442f",
+    edge: "#6f9a4c",
+    marking: "#d8ca6d",
+    detail: "#4f8b42",
+    caption: "#d4dfb2",
+  },
+  SAVANNA: {
+    safe: "#d0a84b",
+    canopy: "#a67630",
+    safeEdge: "#9a7131",
+    grass: "#f0d276",
+    water: "#3f9b98",
+    waterEdge: "#2d7775",
+    wave: "#8fd0bd",
+    waveDark: "#62b1a6",
+    spot: "#8f6a32",
+    spotEdge: "#efd17a",
+    ground: "#b48335",
+    edge: "#f0cf73",
+    marking: "#79552d",
+    detail: "#d6ad55",
+    caption: "#65471f",
+  },
+  ARCTIC: {
+    safe: "#d9efeb",
+    canopy: "#9fc9cd",
+    safeEdge: "#b7d7d4",
+    grass: "#f4fff7",
+    water: "#2d7f98",
+    waterEdge: "#236274",
+    wave: "#a5dde5",
+    waveDark: "#73b9c7",
+    spot: "#6c9aa2",
+    spotEdge: "#f4fff7",
+    ground: "#83abb4",
+    edge: "#edf5e9",
+    marking: "#4f7a85",
+    detail: "#d9efeb",
+    caption: "#315b63",
+  },
+  VOLCANO: {
+    safe: "#66503f",
+    canopy: "#44322c",
+    safeEdge: "#8f6043",
+    grass: "#d08143",
+    water: "#b43c24",
+    waterEdge: "#7e2b25",
+    wave: "#f6cd55",
+    waveDark: "#e06b33",
+    spot: "#3e302b",
+    spotEdge: "#f2a43a",
+    ground: "#3d2d2a",
+    edge: "#e06b33",
+    marking: "#f2a43a",
+    detail: "#7c4430",
+    caption: "#f4bd75",
+  },
+  "ZOO ESCAPE": {
+    safe: "#75807a",
+    canopy: "#4d5d5a",
+    safeEdge: "#a8b1a0",
+    grass: "#bcc7ad",
+    water: "#3f8a95",
+    waterEdge: "#2b646e",
+    wave: "#8fc3c7",
+    waveDark: "#66a4ac",
+    spot: "#53635f",
+    spotEdge: "#d9d1a6",
+    ground: "#394247",
+    edge: "#d9d1a6",
+    marking: "#8fc3c7",
+    detail: "#65737a",
+    caption: "#e7e1bb",
+  },
+};
+const HAZARD_NAMES = {
+  lion: "LION",
+  tiger: "TIGER",
+  bear: "BEAR",
+  hyena: "HYENA",
+  wolf: "WOLF",
+  "polar-bear": "POLAR BEAR",
+  dinosaur: "DINOSAUR",
+  lava: "LAVA",
+  gorilla: "GORILLA",
+  security: "SECURITY VEHICLE",
+  snake: "SNAKE",
+};
 
 function rect(x, y, w, h, color) {
   ctx.fillStyle = color;
@@ -81,6 +182,7 @@ function playTone(type) {
   const notes = {
     hop: [320, 470, 0.07],
     car: [100, 32, 0.26],
+    snake: [260, 90, 0.22],
     water: [220, 55, 0.23],
     goal: [570, 1140, 0.3],
     coin: [700, 1180, 0.12],
@@ -130,82 +232,135 @@ function banana(x, y, scale = 1) {
   ctx.restore();
 }
 
-function shrub(x, y, scale = 1) {
+function shrub(x, y, scale = 1, biome = "JUNGLE") {
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(scale, scale);
-  rect(-16, -5, 34, 15, "#307638");
-  rect(-11, -14, 24, 25, "#307638");
-  rect(-18, -3, 13, 9, "#205d32");
-  rect(-7, -17, 13, 12, "#4b9236");
-  rect(8, -9, 8, 11, "#4b9236");
-  rect(-8, -9, 4, 4, "#8fba43");
+  if (biome === "SAVANNA") {
+    rect(-4, -8, 8, 22, "#7a542a");
+    rect(-17, -11, 34, 7, "#8f6a32");
+    rect(-12, -18, 25, 9, "#a97832");
+    rect(-19, 8, 9, 4, "#efd17a");
+    rect(10, 6, 11, 4, "#d6ad55");
+  } else if (biome === "ARCTIC") {
+    rect(-3, -1, 6, 18, "#5b4c3a");
+    rect(-14, -15, 28, 8, "#2f6657");
+    rect(-11, -22, 22, 8, "#3f7a68");
+    rect(-8, -29, 16, 8, "#558d79");
+    rect(-14, -17, 28, 4, "#f4fff7");
+    rect(-9, -25, 18, 3, "#f4fff7");
+  } else if (biome === "VOLCANO") {
+    rect(-18, 2, 16, 14, "#463b36");
+    rect(-9, -8, 20, 24, "#5a4a42");
+    rect(8, 0, 15, 16, "#3d2d2a");
+    rect(-7, -2, 4, 11, "#f06b24");
+    rect(1, -5, 3, 8, "#f6cd55");
+  } else if (biome === "ZOO ESCAPE") {
+    rect(-16, 3, 32, 15, "#53635f");
+    rect(-14, -14, 4, 17, "#a8b1a0");
+    rect(0, -14, 4, 17, "#a8b1a0");
+    rect(14, -14, 4, 17, "#a8b1a0");
+    rect(-18, -4, 36, 4, "#d9d1a6");
+  } else {
+    rect(-16, -5, 34, 15, "#307638");
+    rect(-11, -14, 24, 25, "#307638");
+    rect(-18, -3, 13, 9, "#205d32");
+    rect(-7, -17, 13, 12, "#4b9236");
+    rect(8, -9, 8, 11, "#4b9236");
+    rect(-8, -9, 4, 4, "#8fba43");
+  }
   ctx.restore();
 }
 
+function drawZoneDetail(name, x, y, style) {
+  if (name === "JUNGLE") {
+    rect(x, y, 4, 14, style.detail);
+    rect(x - 5, y + 5, 14, 4, "#67a24b");
+    rect(x + 3, y - 4, 4, 8, "#315f35");
+  } else if (name === "SAVANNA") {
+    rect(x, y + 7, 3, 9, style.detail);
+    rect(x + 5, y + 3, 3, 13, "#8f6a32");
+    rect(x + 10, y + 8, 3, 8, "#efd17a");
+  } else if (name === "ARCTIC") {
+    rect(x, y + 9, 22, 3, style.detail);
+    rect(x + 8, y + 4, 3, 8, "#f4fff7");
+    rect(x + 14, y + 13, 9, 2, "#5e8d96");
+  } else if (name === "VOLCANO") {
+    rect(x, y + 11, 16, 4, style.detail);
+    rect(x + 4, y + 5, 4, 8, "#f06b24");
+    rect(x + 10, y + 1, 3, 5, "#f6cd55");
+  } else {
+    rect(x, y + 3, 3, 15, style.detail);
+    rect(x + 11, y + 3, 3, 15, style.detail);
+    rect(x - 2, y + 8, 20, 3, "#d9d1a6");
+  }
+}
+
 function drawGround() {
-  rect(0, 0, SIZE, SIZE, "#75a53c");
+  const biome = biomeForLevel(state.level);
+  const zone = BIOME_STYLES[biome.name];
+  rect(0, 0, SIZE, SIZE, zone.safe);
   for (const row of [0, 3, 7, 11]) {
     const y = row * CELL;
-    rect(0, y, SIZE, CELL, row === 0 ? "#397e38" : "#75a53c");
-    rect(0, y + CELL - 5, SIZE, 5, "#477532");
+    rect(0, y, SIZE, CELL, row === 0 ? zone.canopy : zone.safe);
+    rect(0, y + CELL - 5, SIZE, 5, zone.safeEdge);
     for (let i = 0; i < 35; i++) {
       const x = (i * 97 + row * 43) % SIZE;
       const ty = y + 8 + ((i * 17) % 42);
-      rect(x, ty, 3, 6, "#a3ca58");
-      rect(x + 5, ty + 3, 3, 3, "#a3ca58");
+      rect(x, ty, 3, 6, zone.grass);
+      rect(x + 5, ty + 3, 3, 3, zone.grass);
     }
   }
-  rect(0, CELL, SIZE, CELL * 2, "#168f9b");
+  rect(0, CELL, SIZE, CELL * 2, zone.water);
   for (let row = 1; row <= 2; row++) {
-    rect(0, row * CELL, SIZE, 4, "#106e7b");
+    rect(0, row * CELL, SIZE, 4, zone.waterEdge);
     for (let i = 0; i < 21; i++) {
       const x =
         (((i * 79 + Math.sin(sceneryTime * 0.7 + i) * 13) % SIZE) + SIZE) %
         SIZE;
       const y = row * CELL + 14 + ((i * 19) % 42);
-      rect(x, y, 17 + (i % 3) * 5, 3, "#60c8c4");
-      rect(x + 9, y + 5, 8, 2, "#39b2b4");
+      rect(x, y, 17 + (i % 3) * 5, 3, zone.wave);
+      rect(x + 9, y + 5, 8, 2, zone.waveDark);
     }
   }
   for (const start of [4, 8]) {
-    rect(0, start * CELL, SIZE, CELL * 3, "#20282e");
-    rect(0, start * CELL, SIZE, 5, "#c9c5a0");
-    rect(0, (start + 3) * CELL - 5, SIZE, 5, "#c9c5a0");
+    rect(0, start * CELL, SIZE, CELL * 3, zone.ground);
+    rect(0, start * CELL, SIZE, 5, zone.edge);
+    rect(0, (start + 3) * CELL - 5, SIZE, 5, zone.edge);
     for (let line = 1; line < 3; line++)
       for (let x = 15; x < SIZE; x += 70)
-        rect(x, (start + line) * CELL - 2, 32, 3, "#b5bba7");
+        rect(x, (start + line) * CELL - 2, 32, 3, zone.marking);
     for (let i = 0; i < 18; i++)
-      rect(
-        (i * 139) % SIZE,
+      drawZoneDetail(
+        biome.name,
+        (i * 139 + start * 31) % SIZE,
         start * CELL + 13 + ((i * 31) % 165),
-        3,
-        3,
-        "#2b353c",
+        zone,
       );
+    text(biome.name, SIZE / 2, start * CELL + 14, 8, zone.edge, "center");
   }
   for (const row of [3, 7, 11]) {
-    shrub(17, row * CELL + 32, 1.2);
-    shrub(SIZE - 17, row * CELL + 35, 1.1);
+    shrub(17, row * CELL + 32, 1.2, biome.name);
+    shrub(SIZE - 17, row * CELL + 35, 1.1, biome.name);
     if (row !== 11) {
-      shrub(115, row * CELL + 19, 0.55);
-      shrub(647, row * CELL + 19, 0.55);
+      shrub(115, row * CELL + 19, 0.55, biome.name);
+      shrub(647, row * CELL + 19, 0.55, biome.name);
     }
   }
   for (const [index, x] of BANANA_SPOTS.entries()) {
-    rect(x - 31, 7, 64, 49, "#3c6541");
-    rect(x - 27, 7, 56, 4, "#9caf64");
+    rect(x - 31, 7, 64, 49, zone.spot);
+    rect(x - 27, 7, 56, 4, zone.spotEdge);
     if (!state.collectedBananas[index]) banana(x - 2, 26, 1.1);
   }
-  shrub(31, 27, 1.4);
-  shrub(736, 29, 1.4);
-  text("BANANA GROVE", SIZE / 2, 60, 8, "#d2ddb0", "center");
+  shrub(31, 27, 1.4, biome.name);
+  shrub(736, 29, 1.4, biome.name);
+  text("BANANA GROVE", SIZE / 2, 60, 8, zone.spotEdge, "center");
   text(
-    "↑  THE ONLY WAY IS UP  ↑",
+    "↑  SURVIVE THE WILD  ↑",
     SIZE / 2,
     SIZE - 10,
     10,
-    "#d4dfb2",
+    zone.caption,
     "center",
   );
 }
@@ -242,46 +397,158 @@ function drawGrenade(x, y) {
   rect(x - 2, y - 7, 4, 4, "#8a9a7d");
 }
 
-function drawCar(x, y, width, direction, color, wrecked) {
+function drawQuadruped(
+  width,
+  { body, belly, face, mane, stripes, spots, shaggy },
+) {
+  for (const x of [12, width * 0.38, width * 0.64, width - 20])
+    rect(x, 39, 8, 12, "#3b2b22");
+  rect(8, 25, width - 20, 19, body);
+  rect(14, 37, width - 32, 7, belly);
+  rect(3, 29, 10, 4, body);
+  ellipse(width - 14, 29, mane ? 16 : 11, mane ? 15 : 11, mane || face);
+  ellipse(width - 7, 30, 8, 7, face);
+  if (shaggy) {
+    rect(10, 21, 12, 6, face);
+    rect(26, 20, 11, 7, face);
+  }
+  if (stripes)
+    for (let x = 18; x < width - 23; x += 15) rect(x, 25, 4, 19, "#2b241e");
+  if (spots)
+    for (let x = 18; x < width - 25; x += 18)
+      ellipse(x, 31 + (x % 3), 3, 3, "#473624");
+  rect(width - 15, 17, 5, 7, face);
+  rect(width - 6, 18, 4, 6, face);
+  rect(width - 7, 27, 3, 3, "#1c211d");
+  rect(width - 3, 32, 5, 3, "#f1d9b0");
+}
+
+function drawSnakeBody(width) {
+  ellipse(width * 0.42, 43, width * 0.32, 10, "#285f35");
+  ellipse(width * 0.56, 37, width * 0.25, 9, "#3f8a45");
+  ellipse(width * 0.68, 31, width * 0.17, 8, "#5aa64c");
+  ellipse(width - 12, 25, 10, 8, "#6db457");
+  rect(width - 8, 22, 3, 3, "#17251a");
+  rect(width - 3, 28, 8, 2, "#c84432");
+  for (let x = 12; x < width - 22; x += 13)
+    rect(x, 38 + (x % 2) * 2, 5, 3, "#d5c45f");
+}
+
+function drawDinosaur(width) {
+  rect(4, 32, 15, 8, "#3f7a38");
+  rect(13, 24, width - 33, 21, "#4f8f3f");
+  rect(width - 24, 18, 23, 16, "#5da448");
+  rect(width - 12, 24, 12, 8, "#5da448");
+  rect(width - 2, 30, 5, 3, "#fff1cf");
+  rect(width - 18, 20, 3, 3, "#18251c");
+  for (let x = 18; x < width - 28; x += 15) rect(x, 18, 7, 7, "#2c6330");
+  for (const x of [18, width * 0.55]) rect(x, 42, 9, 11, "#386f34");
+}
+
+function drawGorilla(width) {
+  ellipse(width * 0.45, 35, width * 0.3, 18, "#2d312d");
+  ellipse(width * 0.46, 36, width * 0.18, 11, "#64645b");
+  ellipse(width - 15, 20, 13, 11, "#262a27");
+  rect(width - 13, 15, 4, 4, "#d8c6a7");
+  for (const x of [8, width - 18]) rect(x, 26, 9, 27, "#252925");
+  rect(8, 48, 15, 6, "#252925");
+  rect(width - 25, 48, 15, 6, "#252925");
+}
+
+function drawLava(width) {
+  ellipse(width / 2, 38, width * 0.36, 16, "#4a2926");
+  ellipse(width / 2, 35, width * 0.27, 12, "#e2572b");
+  ellipse(width / 2 - 4, 33, width * 0.15, 7, "#ffb13b");
+  rect(width * 0.35, 14, 8, 18, "#f06b24");
+  rect(width * 0.48, 9, 7, 20, "#f6cd55");
+  rect(width * 0.6, 16, 6, 14, "#e2572b");
+}
+
+function drawSecurity(width) {
+  for (const wheel of [12, width - 25]) {
+    rect(wheel, 10, 15, 8, "#171c1a");
+    rect(wheel, 47, 15, 8, "#171c1a");
+  }
+  rect(2, 18, width - 4, 30, "#31485a");
+  rect(8, 14, width - 20, 32, "#e2e7df");
+  rect(14, 19, width - 39, 10, "#6d9dad");
+  rect(width - 26, 19, 16, 10, "#6d9dad");
+  rect(width * 0.42, 10, 10, 5, "#d94f3d");
+  rect(width * 0.55, 10, 10, 5, "#176fc1");
+  rect(5, 30, width - 10, 5, "#26343d");
+}
+
+function drawStunned(width) {
+  ctx.globalAlpha = 0.78;
+  ellipse(width / 2, 38, width * 0.42, 18, "#171f1d");
+  ctx.globalAlpha = 1;
+  const flicker = Math.sin(sceneryTime * 18) > 0;
+  text("✶", width * 0.33, 18, 13, flicker ? "#f6cd55" : "#ff9b3d", "center");
+  text("✶", width * 0.62, 14, 10, flicker ? "#ff9b3d" : "#f6cd55", "center");
+}
+
+function drawHazard(x, y, width, direction, type, wrecked) {
   ctx.save();
   if (direction < 0) {
     ctx.translate(x + width, y);
     ctx.scale(-1, 1);
   } else ctx.translate(x, y);
-  rect(2, 17, width, 42, "#20332c55");
-  for (const wheel of [12, width - 25]) {
-    rect(wheel, 9, 16, 9, "#252e2d");
-    rect(wheel, 47, 16, 9, "#252e2d");
-  }
-  rect(0, 20, width, 25, "#c2bfa3");
-  rect(4, 14, width - 8, 37, color);
-  rect(8, 14, width - 20, 4, "#ffffff38");
-  rect(8, 47, width - 15, 4, "#00000022");
-  const cabin = width > 100 ? width - 39 : 28;
-  if (width > 100) {
-    rect(9, 18, width - 48, 27, "#e5dfc9");
-    rect(12, 20, width - 54, 4, "#fbf3d9");
-    for (let i = 18; i < width - 48; i += 12) rect(i, 24, 2, 18, "#c3c4b1");
-  } else {
-    rect(18, 20, 13, 25, "#243e42");
-    rect(21, 21, 3, 23, "#496669");
-  }
-  rect(cabin, 18, 21, 29, "#ffffff20");
-  rect(cabin + 16, 20, 9, 25, "#26484c");
-  rect(cabin + 17, 21, 3, 22, "#6b9492");
-  rect(width - 7, 17, 5, 8, "#ffecac");
-  rect(width - 7, 40, 5, 8, "#ffecac");
-  rect(3, 18, 4, 7, "#ae4b3d");
-  rect(3, 41, 4, 7, "#ae4b3d");
-  if (wrecked) {
-    rect(4, 14, width - 8, 37, "#262b2e");
-    rect(9, 19, width - 26, 25, "#161b1d");
-    rect(14, 14, width - 30, 4, "#3a4245");
-    const flicker = Math.sin(sceneryTime * 22 + x) > 0;
-    rect(width * 0.3, 8, 12, 9, flicker ? "#ff9b3d" : "#d0542c");
-    rect(width * 0.55, 10, 9, 7, flicker ? "#f6cd55" : "#ff9b3d");
-    rect(width * 0.44, 3, 6, 6, "#3d4448");
-  }
+  rect(2, 50, width, 8, "#17251c55");
+  if (type === "lion")
+    drawQuadruped(width, {
+      body: "#c98635",
+      belly: "#e0aa55",
+      face: "#dca24b",
+      mane: "#744321",
+    });
+  else if (type === "tiger")
+    drawQuadruped(width, {
+      body: "#e47b2d",
+      belly: "#f4bf69",
+      face: "#e9903d",
+      stripes: true,
+    });
+  else if (type === "bear")
+    drawQuadruped(width, {
+      body: "#6b4329",
+      belly: "#8b5a38",
+      face: "#7a4e30",
+      shaggy: true,
+    });
+  else if (type === "hyena")
+    drawQuadruped(width, {
+      body: "#8b7048",
+      belly: "#b99661",
+      face: "#a98555",
+      spots: true,
+      shaggy: true,
+    });
+  else if (type === "wolf")
+    drawQuadruped(width, {
+      body: "#68777a",
+      belly: "#9aa8a4",
+      face: "#77888b",
+    });
+  else if (type === "polar-bear")
+    drawQuadruped(width, {
+      body: "#e4e8df",
+      belly: "#f4f0e4",
+      face: "#e9ecdf",
+      shaggy: true,
+    });
+  else if (type === "snake") drawSnakeBody(width);
+  else if (type === "dinosaur") drawDinosaur(width);
+  else if (type === "lava") drawLava(width);
+  else if (type === "gorilla") drawGorilla(width);
+  else drawSecurity(width);
+  if (wrecked) drawStunned(width);
+  ctx.restore();
+}
+
+function drawSnake(x, y) {
+  ctx.save();
+  ctx.translate(x - 30, y - 32);
+  drawSnakeBody(60);
   ctx.restore();
 }
 
@@ -327,7 +594,7 @@ function drawMonkey(x, y) {
 function burst(type, origin) {
   const x = origin?.x ?? state.player.x;
   const y = origin?.y ?? state.player.row * CELL + CELL / 2;
-  const bloody = type === "car" && blood;
+  const bloody = (type === "car" || type === "snake") && blood;
   const colors =
     type === "blast"
       ? ["#ff9b3d", "#f6cd55", "#e2572b", "#fff3c4", "#4a4038"]
@@ -363,6 +630,11 @@ function burst(type, origin) {
   }
   if (!reduceMotion && (type === "car" || type === "blast"))
     shake = type === "blast" ? 0.3 : 0.24;
+}
+
+function hazardName(row) {
+  const lane = LANE_CONFIG.find((item) => item.row === row);
+  return HAZARD_NAMES[hazardType(lane, state.level)] || "PREDATOR";
 }
 
 function announce(message) {
@@ -580,7 +852,7 @@ async function submitScore(event) {
 function handleEvent(type, data) {
   if (type === "over") {
     showOverlay(
-      "END OF THE ROAD",
+      "END OF THE EXPEDITION",
       "One more<br>monkey business?",
       `You scored ${state.score} points and reached level ${state.level}.<br>The bananas aren’t going to collect themselves.`,
       "Try again",
@@ -590,7 +862,7 @@ function handleEvent(type, data) {
   }
   if (type === "coin-spawn") {
     playTone("coin-spawn");
-    announce("GOLD COINS IN THE LANES!");
+    announce("JUNGLE COINS IN THE WILD!");
     return;
   }
   if (type === "coin") {
@@ -610,17 +882,19 @@ function handleEvent(type, data) {
   if (type === "goal")
     announce(
       state.harvest === 0
-        ? `LEVEL ${state.level} · PICKING UP SPEED`
+        ? `LEVEL ${state.level} · ${biomeForLevel(state.level).name}`
         : "BANANA HAUL! + BONUS",
     );
   else {
     burst(type);
     announce(
       type === "car"
-        ? "OUCH. LOOK BOTH WAYS!"
-        : type === "water"
-          ? "MONKEYS NEED LOGS!"
-          : "OUT OF TIME!",
+        ? `${hazardName(state.player.row)} GOT THE MONKEY!`
+        : type === "snake"
+          ? "AMBUSHED BY A SNAKE!"
+          : type === "water"
+            ? "MONKEYS NEED LOGS!"
+            : "OUT OF TIME!",
     );
   }
   updateHUD();
@@ -648,7 +922,7 @@ function updateHUD() {
     "aria-label",
     state.launcher
       ? `Fire shot, ${state.launcher} remaining`
-      : "Fire shot unavailable, collect a road coin",
+      : "Fire shot unavailable, collect a jungle coin",
   );
   const seconds = Math.ceil(state.remaining);
   $("time").textContent = `${seconds}s`;
@@ -723,7 +997,7 @@ function pauseGame() {
   showOverlay(
     "TAKE YOUR TIME",
     "Even monkeys<br>need a break.",
-    "Your commute can wait.<br>Pick up right where you left off.",
+    "Your jungle trek can wait.<br>Pick up right where you left off.",
     "Back to the jungle",
   );
 }
@@ -748,7 +1022,7 @@ function fire() {
     !state.grenade &&
     state.launcher === 0
   )
-    announce("GRAB A ROAD COIN TO LOAD A SHOT");
+    announce("GRAB A JUNGLE COIN TO LOAD A SHOT");
 }
 
 function draw(dt) {
@@ -774,18 +1048,20 @@ function draw(dt) {
       if (lane.kind === "river")
         drawLog(object.x, lane.row * CELL, object.width);
       else
-        drawCar(
+        drawHazard(
           object.x,
           lane.row * CELL,
           object.width,
           lane.speed,
-          palette[(lane.row + Math.floor(object.width)) % palette.length],
+          hazardType(lane, state.level),
           state.wrecks.some(
             (wreck) => wreck.row === lane.row && wreck.id === object.id,
           ),
         );
     }
   }
+  for (const snake of state.snakes)
+    drawSnake(snake.x, snake.row * CELL + CELL / 2);
   for (const coin of state.coins) drawCoin(coin.x, coin.row * CELL + CELL / 2);
   if (state.respawn === 0 && state.mode !== "over")
     drawMonkey(state.player.x, state.player.row * CELL + 32);
