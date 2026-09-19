@@ -191,6 +191,7 @@ h1 em {
   align-items: start;
 }
 .arcade {
+  position: relative;
   background: var(--ink);
   border-radius: 13px;
   overflow: hidden;
@@ -720,18 +721,21 @@ kbd {
 }
 .announcement {
   position: absolute;
-  top: 20%;
+  top: 32px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   background: var(--yellow);
   color: var(--ink);
-  font: 700 17px var(--display);
-  padding: 12px 20px;
+  font: 700 12px var(--display);
+  padding: 7px 14px;
   box-shadow: 0 4px 0 #183f3533;
   border-radius: 5px;
   opacity: 0;
   pointer-events: none;
   white-space: nowrap;
+  max-width: calc(100% - 48px);
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: opacity 0.2s;
 }
 .announcement.visible {
@@ -1145,7 +1149,9 @@ html.mobile body {
     padding-top: 12px;
   }
   .announcement {
-    font-size: 13px;
+    top: 28px;
+    font-size: 10px;
+    padding: 6px 11px;
   }
   .game-footer {
     font-size: 7px;

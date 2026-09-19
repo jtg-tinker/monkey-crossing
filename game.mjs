@@ -489,7 +489,7 @@ function drawStunned(width) {
   text("✶", width * 0.62, 14, 10, flicker ? "#ff9b3d" : "#f6cd55", "center");
 }
 
-function drawHazard(x, y, width, direction, type, wrecked) {
+function drawHazard(x, y, width, direction, type, wrecked, biome) {
   ctx.save();
   if (direction < 0) {
     ctx.translate(x + width, y);
@@ -497,12 +497,22 @@ function drawHazard(x, y, width, direction, type, wrecked) {
   } else ctx.translate(x, y);
   rect(2, 50, width, 8, "#17251c55");
   if (type === "lion")
-    drawQuadruped(width, {
-      body: "#c98635",
-      belly: "#e0aa55",
-      face: "#dca24b",
-      mane: "#744321",
-    });
+    drawQuadruped(
+      width,
+      biome === "SAVANNA"
+        ? {
+            body: "#8f5a1c",
+            belly: "#b57e33",
+            face: "#9c6622",
+            mane: "#452a12",
+          }
+        : {
+            body: "#c98635",
+            belly: "#e0aa55",
+            face: "#dca24b",
+            mane: "#744321",
+          },
+    );
   else if (type === "tiger")
     drawQuadruped(width, {
       body: "#e47b2d",
@@ -519,9 +529,9 @@ function drawHazard(x, y, width, direction, type, wrecked) {
     });
   else if (type === "hyena")
     drawQuadruped(width, {
-      body: "#8b7048",
-      belly: "#b99661",
-      face: "#a98555",
+      body: "#655030",
+      belly: "#8f744a",
+      face: "#755c37",
       spots: true,
       shaggy: true,
     });
@@ -1061,6 +1071,7 @@ function draw(dt) {
           state.wrecks.some(
             (wreck) => wreck.row === lane.row && wreck.id === object.id,
           ),
+          biomeForLevel(state.level).name,
         );
     }
   }

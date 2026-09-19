@@ -404,6 +404,13 @@ test("browser gameplay and responsive interface", async (t) => {
           ),
           true,
         );
+        const noticeBox = await page.locator(".announcement").boundingBox();
+        const boardBox = await page.locator(".scoreboard").boundingBox();
+        assert.ok(
+          noticeBox.y >= boardBox.y &&
+            noticeBox.y + noticeBox.height <= boardBox.y + boardBox.height,
+          "announcement stays inside the scoreboard banner",
+        );
         for (let i = 0; i < 80; i++) {
           if (await page.isVisible("#overlay")) break;
           await advance(page, 10);
