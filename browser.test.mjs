@@ -396,6 +396,14 @@ test("browser gameplay and responsive interface", async (t) => {
           ),
           !darkBefore,
         );
+        await page.click("#bnw");
+        assert.equal(await page.getAttribute("#bnw", "aria-pressed"), "true");
+        assert.equal(
+          await page.evaluate(() =>
+            document.documentElement.classList.contains("bnw"),
+          ),
+          true,
+        );
         for (let i = 0; i < 80; i++) {
           if (await page.isVisible("#overlay")) break;
           await advance(page, 10);
@@ -429,6 +437,13 @@ test("browser gameplay and responsive interface", async (t) => {
           ),
           !darkBefore,
           "dark mode choice persists across reload",
+        );
+        assert.equal(
+          await page.evaluate(() =>
+            document.documentElement.classList.contains("bnw"),
+          ),
+          true,
+          "black and white choice persists across reload",
         );
         assert.equal(await page.locator("#share").count(), 0);
         assert.equal(
@@ -556,6 +571,48 @@ test("browser gameplay and responsive interface", async (t) => {
           dragPrevented: true,
           androidAgent: true,
         });
+        await page.evaluate(() => {
+          mobileTestState.mode = "playing";
+          mobileTestState.lives = 3;
+          window.scrollTo(0, 300);
+        });
+        const lockedY = await page.evaluate(() => window.scrollY);
+        await session.send("Input.dispatchTouchEvent", {
+          type: "touchStart",
+          touchPoints: [{ x: 340, y: 500 }],
+        });
+        await session.send("Input.dispatchTouchEvent", {
+          type: "touchMove",
+          touchPoints: [{ x: 340, y: 200 }],
+        });
+        await session.send("Input.dispatchTouchEvent", {
+          type: "touchEnd",
+          touchPoints: [],
+        });
+        assert.equal(
+          await page.evaluate(() => window.scrollY),
+          lockedY,
+          "page stays locked while playing on a touch platform",
+        );
+        await page.tap("#pause");
+        const freeY = await page.evaluate(() => window.scrollY);
+        await session.send("Input.dispatchTouchEvent", {
+          type: "touchStart",
+          touchPoints: [{ x: 340, y: 500 }],
+        });
+        await session.send("Input.dispatchTouchEvent", {
+          type: "touchMove",
+          touchPoints: [{ x: 340, y: 200 }],
+        });
+        await session.send("Input.dispatchTouchEvent", {
+          type: "touchEnd",
+          touchPoints: [],
+        });
+        assert.notEqual(
+          await page.evaluate(() => window.scrollY),
+          freeY,
+          "page can scroll again once the game is paused",
+        );
         for (const width of [320, 390, 640, 768]) {
           await page.setViewportSize({ width, height: 900 });
           assert.equal(
