@@ -839,14 +839,6 @@ html.dark .toast {
   background: #e8eddc;
   color: #10211a;
 }
-html.bnw .site-header,
-html.bnw .intro,
-html.bnw .game-layout,
-html.bnw .leaderboard,
-html.bnw .page-footer,
-html.bnw .toast {
-  filter: grayscale(1);
-}
 html.mobile,
 html.mobile body {
   overscroll-behavior: none;

@@ -381,7 +381,10 @@ test("browser gameplay and responsive interface", async (t) => {
           "turning blood off clears red particles",
         );
         await page.click("#sound");
-        assert.equal(await page.getAttribute("#sound", "aria-pressed"), "true");
+        assert.equal(
+          await page.getAttribute("#sound", "aria-pressed"),
+          "false",
+        );
         const darkBefore = await page.evaluate(() =>
           document.documentElement.classList.contains("dark"),
         );
@@ -395,14 +398,6 @@ test("browser gameplay and responsive interface", async (t) => {
             document.documentElement.classList.contains("dark"),
           ),
           !darkBefore,
-        );
-        await page.click("#bnw");
-        assert.equal(await page.getAttribute("#bnw", "aria-pressed"), "true");
-        assert.equal(
-          await page.evaluate(() =>
-            document.documentElement.classList.contains("bnw"),
-          ),
-          true,
         );
         const noticeBox = await page.locator(".announcement").boundingBox();
         const boardBox = await page.locator(".scoreboard").boundingBox();
@@ -444,13 +439,6 @@ test("browser gameplay and responsive interface", async (t) => {
           ),
           !darkBefore,
           "dark mode choice persists across reload",
-        );
-        assert.equal(
-          await page.evaluate(() =>
-            document.documentElement.classList.contains("bnw"),
-          ),
-          true,
-          "black and white choice persists across reload",
         );
         assert.equal(await page.locator("#share").count(), 0);
         assert.equal(

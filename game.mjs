@@ -31,15 +31,13 @@ ctx.imageSmoothingEnabled = false;
 let state = createState();
 let best = 0;
 let blood = true;
-let sound = false;
+let sound = true;
 let dark = matchMedia("(prefers-color-scheme: dark)").matches;
-let bnw = false;
 try {
   best = Number(localStorage.getItem("monkey-crossing-best")) || 0;
   blood = localStorage.getItem("monkey-crossing-blood") !== "false";
   const storedDark = localStorage.getItem("monkey-crossing-dark");
   if (storedDark !== null) dark = storedDark === "true";
-  bnw = localStorage.getItem("monkey-crossing-bnw") === "true";
 } catch {}
 let audio;
 let particles = [];
@@ -959,12 +957,10 @@ function updateHUD() {
   $("blood").setAttribute("aria-pressed", blood);
   $("sound").setAttribute("aria-pressed", sound);
   $("dark").setAttribute("aria-pressed", dark);
-  $("bnw").setAttribute("aria-pressed", bnw);
 }
 
 function applyTheme() {
   document.documentElement.classList.toggle("dark", dark);
-  document.documentElement.classList.toggle("bnw", bnw);
   document
     .querySelector('meta[name="theme-color"]')
     .setAttribute("content", dark ? "#0d1713" : "#183f35");
@@ -1138,12 +1134,6 @@ $("blood").addEventListener("click", () => {
 $("dark").addEventListener("click", () => {
   dark = !dark;
   save("monkey-crossing-dark", dark);
-  applyTheme();
-  updateHUD();
-});
-$("bnw").addEventListener("click", () => {
-  bnw = !bnw;
-  save("monkey-crossing-bnw", bnw);
   applyTheme();
   updateHUD();
 });

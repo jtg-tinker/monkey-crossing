@@ -25,10 +25,6 @@
             ? matchMedia("(prefers-color-scheme: dark)").matches
             : stored === "true",
         );
-        document.documentElement.classList.toggle(
-          "bnw",
-          localStorage.getItem("monkey-crossing-bnw") === "true",
-        );
       } catch {}
     </script>
     <link rel="stylesheet" href="./style.css" />
@@ -230,9 +226,6 @@
               ><span class="switch" aria-hidden="true"></span></button
             ><button id="dark" class="setting" aria-pressed="false">
               <span>Dark mode <small>night shift</small></span
-              ><span class="switch" aria-hidden="true"></span></button
-            ><button id="bnw" class="setting" aria-pressed="false">
-              <span>Black &amp; white <small>film noir</small></span
               ><span class="switch" aria-hidden="true"></span>
             </button>
           </div>

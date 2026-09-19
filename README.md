@@ -16,11 +16,11 @@ A Frogger-style jungle survival arcade game built with HTML, CSS, and JavaScript
 - Collect the left, middle, and right banana spots to advance a level; each stays empty until all three are collected.
 - Pairs of gold coins appear on different hazard lanes and load up to three grenade shots. B/Space, double-tap, or FIRE disables a hazard for +25 points; wrecked hazards stop being deadly until they leave or recover.
 - Points for forward progress, successful crossings, and hazard blasts, plus a remaining-time bonus.
-- Personal best scores and the blood-effects, dark mode, and black & white preferences saved locally in your browser.
+- Personal best scores and the blood-effects and dark mode preferences saved locally in your browser.
 - A public **Top Monkey Crossers** leaderboard with three-letter arcade initials, player platform, and 1st–10th records.
-- Optional black & white display mode, synthesized sound effects, pause/resume, and reduced-motion support.
+- Optional synthesized sound effects, pause/resume, and reduced-motion support.
 
-Blood effects are on by default; sound effects are off. Both can be changed beside the game. No account is required to play. The public leaderboard uses Netlify Functions and Netlify Blobs when the site is deployed through Netlify; local previews use a browser-only board.
+Blood and sound effects are on by default. Both can be changed beside the game. No account is required to play. The public leaderboard uses Netlify Functions and Netlify Blobs when the site is deployed through Netlify; local previews use a browser-only board.
 
 ## How to play
 
@@ -40,7 +40,7 @@ Avoid animals and snakes, stay on logs in the river, and don't drift off-screen.
 | Fire on mobile        | Double-tap the game board or the FIRE button         |
 | Pause / resume        | P, Escape, or the pause button                       |
 | Start / restart       | The button in the game overlay                       |
-| Toggle sound, blood, dark, or black & white | Settings beside or below the game      |
+| Toggle sound, blood, or dark mode | Settings beside or below the game                    |
 
 Switching tabs or moving focus to another window automatically pauses an active game.
 
