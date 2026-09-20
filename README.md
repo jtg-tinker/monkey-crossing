@@ -14,7 +14,7 @@ A Frogger-style jungle survival arcade game built with HTML, CSS, and JavaScript
 - Keyboard controls, mobile swipe gestures, on-screen movement buttons, and iOS/Android selection, long-press, and page-scroll suppression while a run is active.
 - Three lives, a 60-second timer per attempt, and progressively faster hazards.
 - Collect the left, middle, and right banana spots to advance a level; each stays empty until all three are collected.
-- Pairs of gold coins appear on different hazard lanes and load up to three grenade shots. B/Space, double-tap, or FIRE disables a hazard for +25 points; wrecked hazards stop being deadly until they leave or recover.
+- Pairs of gold coins appear on different hazard lanes and load up to three grenade shots. B/Space, double-tap, or FIRE blasts a hazard for +25 points; blasted animals vanish in a cartoon blood burst until the lane cycles or a stationary hazard recovers.
 - Points for forward progress, successful crossings, and hazard blasts, plus a remaining-time bonus.
 - Personal best scores and the blood-effects and dark mode preferences saved locally in your browser.
 - A public **Top Monkey Crossers** leaderboard with three-letter arcade initials, player platform, and 1st–10th records.
@@ -26,7 +26,7 @@ Blood and sound effects are on by default. Both can be changed beside the game. 
 
 Reach the banana grove at the top of the screen and move onto a banana spot to collect it. The banana disappears from that exact spot, which stays empty even if you lose a life. Empty spots and gaps do not award another banana; you can move along the grove to reach an uncollected one. Collect all three spots to advance to the next level and refill the grove.
 
-Two gold coins appear briefly on different hazard lanes. Collect one to load a shot, then press **B** or **Space** on desktop, or double-tap/tap **FIRE** on mobile, to launch a grenade. A hit disables that hazard or clears a snake and awards 25 points.
+Two gold coins appear briefly on different hazard lanes. Collect one to load a shot, then press **B** or **Space** on desktop, or double-tap/tap **FIRE** on mobile, to launch a grenade. A hit removes that animal or snake and awards 25 points.
 
 Each level changes the survival zone: jungle predators and snakes, savanna lions and hyenas, arctic wolves and polar bears, volcano dinosaurs and lava, then zoo tigers, gorillas, and security vehicles. The cycle repeats with faster hazards.
 

@@ -478,16 +478,7 @@ function drawSecurity(width) {
   rect(5, 30, width - 10, 5, "#26343d");
 }
 
-function drawStunned(width) {
-  ctx.globalAlpha = 0.78;
-  ellipse(width / 2, 38, width * 0.42, 18, "#171f1d");
-  ctx.globalAlpha = 1;
-  const flicker = Math.sin(sceneryTime * 18) > 0;
-  text("✶", width * 0.33, 18, 13, flicker ? "#f6cd55" : "#ff9b3d", "center");
-  text("✶", width * 0.62, 14, 10, flicker ? "#ff9b3d" : "#f6cd55", "center");
-}
-
-function drawHazard(x, y, width, direction, type, wrecked, biome) {
+function drawHazard(x, y, width, direction, type, biome) {
   ctx.save();
   if (direction < 0) {
     ctx.translate(x + width, y);
@@ -551,7 +542,6 @@ function drawHazard(x, y, width, direction, type, wrecked, biome) {
   else if (type === "lava") drawLava(width);
   else if (type === "gorilla") drawGorilla(width);
   else drawSecurity(width);
-  if (wrecked) drawStunned(width);
   ctx.restore();
 }
 
@@ -883,6 +873,8 @@ function handleEvent(type, data) {
   }
   if (type === "blast") {
     playTone("blast");
+    if (data?.kind !== "lava" && data?.kind !== "security")
+      burst("car", data);
     burst("blast", data);
     announce("DIRECT HIT! +25");
     updateHUD();
@@ -1057,16 +1049,17 @@ function draw(dt) {
     )) {
       if (lane.kind === "river")
         drawLog(object.x, lane.row * CELL, object.width);
-      else
+      else if (
+        !state.wrecks.some(
+          (wreck) => wreck.row === lane.row && wreck.id === object.id,
+        )
+      )
         drawHazard(
           object.x,
           lane.row * CELL,
           object.width,
           lane.speed,
           hazardType(lane, state.level),
-          state.wrecks.some(
-            (wreck) => wreck.row === lane.row && wreck.id === object.id,
-          ),
           biomeForLevel(state.level).name,
         );
     }

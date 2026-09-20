@@ -279,7 +279,11 @@ export function step(state, dt, onEvent = () => {}) {
       state.snakes = state.snakes.filter((item) => item !== snake);
       state.grenade = null;
       state.score += 25;
-      onEvent("blast", { x: snake.x, y: snake.row * CELL + CELL / 2 });
+      onEvent("blast", {
+        x: snake.x,
+        y: snake.row * CELL + CELL / 2,
+        kind: "snake",
+      });
     } else if (hit) {
       state.wrecks.push({
         row: road.row,
@@ -291,6 +295,7 @@ export function step(state, dt, onEvent = () => {}) {
       onEvent("blast", {
         x: hit.x + hit.width / 2,
         y: road.row * CELL + CELL / 2,
+        kind: hazardType(road, state.level),
       });
     } else if (state.grenade.y < -20) state.grenade = null;
   }
