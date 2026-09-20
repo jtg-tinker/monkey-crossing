@@ -107,14 +107,9 @@ For a new Netlify site, import `jtg-tinker/monkey-crossing`, keep the `main` pro
 
 ### GitHub Pages
 
-GitHub Pages is not enabled by simply pushing the repository. To publish this project:
+GitHub Pages is enabled for the **main** branch at **/ (root)** and serves the game at **https://jtg-tinker.github.io/monkey-crossing/**. Pushes to `main` update the site automatically.
 
-1. Open the repository's **Settings → Pages**.
-2. Select **Deploy from a branch** as the source.
-3. Select the **main** branch and **/ (root)** folder, then save.
-4. Wait for deployment to finish and use the website URL shown in Pages settings.
-
-The repository root already contains the playable static files, so branch-based GitHub Pages hosting does not need the ignored `dist/` folder. Future pushes to `main` will update the site once Pages is configured. GitHub Pages cannot run the Netlify function, so its leaderboard falls back to a browser-only board; use Netlify for the public board.
+The repository root already contains the playable static files, so branch-based GitHub Pages hosting does not need the ignored `dist/` folder. GitHub Pages cannot run the Netlify function, so its leaderboard falls back to a browser-only board; use Netlify for the public board. The public leaderboard resumes automatically on Netlify once a Netlify deploy succeeds — no code changes are needed.
 
 ## Project structure
 
